@@ -31,7 +31,7 @@ def start_bot(app) -> None:
     """
     Запуск Telegram-бота (long polling).
     """
-    app.run_polling(allowed_updates=app.resolve_used_update_types())
+    app.run_polling()
 
 
 def main() -> None:
