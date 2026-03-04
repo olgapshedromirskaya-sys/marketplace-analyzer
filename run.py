@@ -4,7 +4,7 @@ import uvicorn
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from api import app as fastapi_app
-from bot import build_application
+from telegram_bot import build_application
 from config import settings
 from notifications import setup_scheduler
 
