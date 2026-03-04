@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from config import settings
 from database import (
-    init_db,
+    init_db_sync,
     save_analysis,
     get_latest_analyses,
     set_mpstats_token,
@@ -58,8 +58,9 @@ class TokenRequest(BaseModel):
 def on_startup() -> None:
     """
     Хук запуска FastAPI: инициализируем базу.
+    Используем синхронную версию, чтобы не блокировать event loop.
     """
-    init_db()
+    init_db_sync()
 
 
 @app.get("/api/health")

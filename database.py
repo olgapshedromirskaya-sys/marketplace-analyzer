@@ -30,13 +30,12 @@ def get_connection():
         conn.close()
 
 
-def init_db() -> None:
+def _init_db_core() -> None:
     """
-    Инициализация структуры базы данных:
-    - users
-    - analyses
-    - watchlist
-    - currency_cache
+    Синхронная внутренняя функция инициализации структуры БД.
+
+    Вынесена отдельно, чтобы её можно было вызывать как из sync-кода,
+    так и из async-обёртки init_db().
     """
     with get_connection() as conn:
         cur = conn.cursor()
@@ -94,6 +93,23 @@ def init_db() -> None:
             )
             """
         )
+
+
+async def init_db() -> None:
+    """
+    Асинхронная обёртка для инициализации БД.
+
+    Позволяет вызывать init_db() через asyncio.run(init_db()),
+    как в вашей команде из терминала.
+    """
+    _init_db_core()
+
+
+def init_db_sync() -> None:
+    """
+    Синхронная версия инициализации БД для использования в обычном коде.
+    """
+    _init_db_core()
 
 
 # ===== ОПЕРАЦИИ С ПОЛЬЗОВАТЕЛЯМИ =====
@@ -351,6 +367,7 @@ def set_cached_currency(currency: str, rate: float) -> None:
 
 __all__ = [
     "init_db",
+    "init_db_sync",
     "add_user",
     "remove_user",
     "list_users",
