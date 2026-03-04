@@ -1,12 +1,11 @@
 from dataclasses import dataclass
 from urllib.parse import quote_plus
 
-from googletrans import Translator
+# Используем deep-translator вместо googletrans,
+# чтобы избежать конфликтов по зависимостям.
+from deep_translator import GoogleTranslator
 
 from currency import get_cny_rate_rub
-
-
-translator = Translator()
 
 
 @dataclass
@@ -27,8 +26,10 @@ def build_1688_search(query: str) -> ChinaSearchResult:
     Также возвращает актуальный курс юаня к рублю.
     """
     try:
-        translation = translator.translate(query, src="ru", dest="zh-cn")
-        chinese_query = translation.text
+        # Переводим текст с русского на китайский через deep-translator
+        chinese_query = GoogleTranslator(source="ru", target="zh-CN").translate(
+            query
+        )
     except Exception:
         # В случае ошибки перевода просто используем исходный запрос
         chinese_query = query
