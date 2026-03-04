@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Marketplace Analyzer</title>
+    <!-- Подключаем Telegram WebApp SDK, если открыто внутри Telegram -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      :root {
+        --bg: #0d1117;
+        --card: #161b22;
+        --text: #c9d1d9;
+        --muted: #8b949e;
+        --wb: #cb11ab;
+        --ozon: #005bff;
+        --green: #3fb950;
+        --yellow: #d29922;
+        --red: #f85149;
+        --border: #30363d;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: radial-gradient(circle at top left, #161b22 0, #0d1117 50%);
+        color: var(--text);
+      }
+
+      .app {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin: 0 0 16px;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .tab {
+        flex: 1;
+        text-align: center;
+        padding: 8px 0;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        cursor: pointer;
+        font-size: 14px;
+        color: var(--muted);
+        background: rgba(22, 27, 34, 0.8);
+      }
+
+      .tab.active {
+        color: #fff;
+        border-color: var(--wb);
+        background: linear-gradient(90deg, var(--wb), var(--ozon));
+      }
+
+      .tab[data-tab="ozon"].active {
+        border-color: var(--ozon);
+      }
+
+      .tab[data-tab="settings"].active {
+        border-color: var(--border);
+        background: var(--card);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .card {
+        background: var(--card);
+        border-radius: 16px;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .card-value {
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .trend-positive {
+        color: var(--green);
+      }
+
+      .trend-negative {
+        color: var(--red);
+      }
+
+      .trend-stable {
+        color: var(--yellow);
+      }
+
+      .verdict-block {
+        margin: 8px 0 16px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .verdict-green {
+        background: rgba(63, 185, 80, 0.15);
+        border: 1px solid var(--green);
+      }
+
+      .verdict-yellow {
+        background: rgba(210, 153, 34, 0.15);
+        border: 1px solid var(--yellow);
+      }
+
+      .verdict-red {
+        background: rgba(248, 81, 73, 0.15);
+        border: 1px solid var(--red);
+      }
+
+      .verdict-title {
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .verdict-sub {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      th,
+      td {
+        padding: 6px 4px;
+        text-align: left;
+        border-bottom: 1px solid rgba(48, 54, 61, 0.6);
+      }
+
+      th {
+        color: var(--muted);
+        font-weight: 500;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        background: rgba(99, 110, 123, 0.25);
+        color: var(--muted);
+      }
+
+      .pill-green {
+        background: rgba(63, 185, 80, 0.2);
+        color: var(--green);
+      }
+
+      .pill-yellow {
+        background: rgba(210, 153, 34, 0.2);
+        color: var(--yellow);
+      }
+
+      .pill-red {
+        background: rgba(248, 81, 73, 0.2);
+        color: var(--red);
+      }
+
+      .inputs-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .input-group {
+        flex: 1 1 140px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      label {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      input,
+      select {
+        background: #0d1117;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 6px 8px;
+        font-size: 13px;
+        outline: none;
+      }
+
+      input:focus,
+      select:focus {
+        border-color: var(--wb);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .btn-primary {
+        background: linear-gradient(90deg, var(--wb), var(--ozon));
+        color: #fff;
+      }
+
+      .btn-outline {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--muted);
+      }
+
+      .btn-row {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .muted {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <h1>Marketplace Analyzer</h1>
+
+      <div class="tabs">
+        <div class="tab active" data-tab="wb">WB</div>
+        <div class="tab" data-tab="ozon">Ozon</div>
+        <div class="tab" data-tab="settings">Настройки</div>
+      </div>
+
+      <!-- Вкладка WB/Ozon: общий контент, меняется только акцент -->
+      <div id="tab-main">
+        <div class="card">
+          <div class="card-header">
+            <span>Параметры анализа</span>
+            <span class="pill" id="current-platform-pill">WB</span>
+          </div>
+          <div class="inputs-row">
+            <div class="input-group">
+              <label>Ключевое слово / категория</label>
+              <input id="inp-query" placeholder="Например: органайзер для белья" />
+            </div>
+            <div class="input-group">
+              <label>Бюджет, ₽</label>
+              <input id="inp-budget" type="number" value="300000" />
+            </div>
+            <div class="input-group">
+              <label>Период</label>
+              <select id="inp-period">
+                <option value="1">1 мес</option>
+                <option value="3">3 мес</option>
+                <option value="6">6 мес</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Цена продажи, ₽</label>
+              <input id="inp-sale-price" type="number" value="1990" />
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-outline" id="btn-history">История</button>
+            <button class="btn btn-primary" id="btn-analyze">Запустить анализ</button>
+          </div>
+          <div class="muted" id="status-text"></div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <div class="card-header">
+              <span>Выручка</span>
+              <span class="pill" id="trend-pill">–</span>
+            </div>
+            <div class="card-value" id="val-revenue">–</div>
+            <div class="muted" id="val-season">Сезонность: –</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <span>Продавцов</span>
+            </div>
+            <div class="card-value" id="val-sellers">–</div>
+            <div class="muted" id="val-noname">% no-name: –</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <span>% выкупа</span>
+            </div>
+            <div class="card-value" id="val-buyout">–</div>
+            <div class="muted" id="val-top1">Топ-1: –</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <span>Финансы</span>
+            </div>
+            <div class="card-value" id="val-profit">–</div>
+            <div class="muted" id="val-roi">ROI / окупаемость: –</div>
+          </div>
+        </div>
+
+        <div class="verdict-block verdict-yellow" id="verdict-block">
+          <div class="verdict-title" id="verdict-title">Вердикт: –</div>
+          <div class="verdict-sub" id="verdict-sub">
+            Запустите анализ, чтобы получить вердикт по нише и товару.
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 16px">
+          <div class="card-header">
+            <span>Топ-5 конкурентов</span>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Товар</th>
+                  <th>Цена</th>
+                  <th>Продаж/мес</th>
+                  <th>Рейтинг</th>
+                </tr>
+              </thead>
+              <tbody id="tbl-competitors">
+                <tr>
+                  <td colspan="4" class="muted">Пока нет данных.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span>Финансовый расчёт</span>
+          </div>
+          <div class="grid">
+            <div>
+              <div class="muted">Себестоимость, ₽</div>
+              <div class="card-value" id="val-cost">–</div>
+            </div>
+            <div>
+              <div class="muted">Цена безубытка, ₽</div>
+              <div class="card-value" id="val-breakeven">–</div>
+            </div>
+            <div>
+              <div class="muted">Маржа, %</div>
+              <div class="card-value" id="val-margin">–</div>
+            </div>
+            <div>
+              <div class="muted">Единиц на бюджет</div>
+              <div class="card-value" id="val-units">–</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Вкладка настроек -->
+      <div id="tab-settings" class="hidden">
+        <div class="card">
+          <div class="card-header">
+            <span>MPStats токен</span>
+          </div>
+          <div class="input-group">
+            <label>Ваш MPStats API токен</label>
+            <input id="inp-token" type="password" placeholder="Вставьте токен сюда" />
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-save-token">
+              Сохранить токен
+            </button>
+          </div>
+          <div class="muted" id="token-status">
+            Токен хранится только на сервере, по user_id.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span>Информация</span>
+          </div>
+          <div class="muted">
+            Данные по нишам берутся из MPStats (или из демо-режима, если токен
+            не задан или сервис временно недоступен). Юнит-экономика
+            рассчитывается на основе введённых параметров и общих допущений по
+            логистике и расходам.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Определяем user_id из Telegram WebApp или даём 0 (демо)
+      const tg = window.Telegram ? window.Telegram.WebApp : null;
+      const USER_ID = tg && tg.initDataUnsafe && tg.initDataUnsafe.user
+        ? tg.initDataUnsafe.user.id
+        : 0;
+
+      const apiBase = "/api";
+
+      const tabs = document.querySelectorAll(".tab");
+      const tabMain = document.getElementById("tab-main");
+      const tabSettings = document.getElementById("tab-settings");
+      const platformPill = document.getElementById("current-platform-pill");
+
+      let currentPlatform = "wb";
+
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          tabs.forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+          const tname = tab.dataset.tab;
+          if (tname === "settings") {
+            tabMain.classList.add("hidden");
+            tabSettings.classList.remove("hidden");
+          } else {
+            tabMain.classList.remove("hidden");
+            tabSettings.classList.add("hidden");
+            currentPlatform = tname;
+            platformPill.textContent = tname.toUpperCase();
+            platformPill.style.background =
+              tname === "wb" ? "rgba(203,17,171,0.2)" : "rgba(0,91,255,0.2)";
+            platformPill.style.color =
+              tname === "wb" ? "#CB11AB" : "#005BFF";
+          }
+        });
+      });
+
+      const queryInput = document.getElementById("inp-query");
+      const budgetInput = document.getElementById("inp-budget");
+      const periodSelect = document.getElementById("inp-period");
+      const saleInput = document.getElementById("inp-sale-price");
+      const statusText = document.getElementById("status-text");
+
+      const btnAnalyze = document.getElementById("btn-analyze");
+      const btnHistory = document.getElementById("btn-history");
+      const tblCompetitors = document.getElementById("tbl-competitors");
+
+      const valRevenue = document.getElementById("val-revenue");
+      const valSeason = document.getElementById("val-season");
+      const valSellers = document.getElementById("val-sellers");
+      const valNoname = document.getElementById("val-noname");
+      const valBuyout = document.getElementById("val-buyout");
+      const valTop1 = document.getElementById("val-top1");
+      const valProfit = document.getElementById("val-profit");
+      const valRoi = document.getElementById("val-roi");
+      const valCost = document.getElementById("val-cost");
+      const valBreakeven = document.getElementById("val-breakeven");
+      const valMargin = document.getElementById("val-margin");
+      const valUnits = document.getElementById("val-units");
+      const trendPill = document.getElementById("trend-pill");
+      const verdictBlock = document.getElementById("verdict-block");
+      const verdictTitle = document.getElementById("verdict-title");
+      const verdictSub = document.getElementById("verdict-sub");
+
+      const inpToken = document.getElementById("inp-token");
+      const btnSaveToken = document.getElementById("btn-save-token");
+      const tokenStatus = document.getElementById("token-status");
+
+      function formatNumber(n) {
+        if (n === null || n === undefined || isNaN(n)) return "–";
+        return n.toLocaleString("ru-RU");
+      }
+
+      function setStatus(msg) {
+        statusText.textContent = msg || "";
+      }
+
+      async function callAnalyze() {
+        const query = queryInput.value.trim();
+        const budget = parseFloat(budgetInput.value || "0");
+        const period = parseInt(periodSelect.value, 10);
+        const salePrice = parseFloat(saleInput.value || "0");
+
+        if (!query) {
+          setStatus("Введите ключевое слово или категорию.");
+          return;
+        }
+
+        setStatus("Запускаю анализ...");
+
+        try {
+          const resp = await fetch(`${apiBase}/analyze`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_id: USER_ID,
+              query,
+              budget,
+              platform: currentPlatform,
+              period_months: period,
+              sale_price: salePrice,
+            }),
+          });
+          if (!resp.ok) {
+            throw new Error("Ошибка API");
+          }
+          const data = await resp.json();
+          renderAnalysis(data);
+          setStatus("Готово.");
+        } catch (e) {
+          console.error(e);
+          setStatus("Ошибка при запросе. Возможно, используется демо-режим.");
+        }
+      }
+
+      function renderAnalysis(data) {
+        const a = data.analysis;
+        const c = data.calculator;
+
+        valRevenue.textContent = a.revenue_per_month
+          ? formatNumber(a.revenue_per_month) + " ₽/мес"
+          : "–";
+        valSeason.textContent =
+          "Сезонность: " +
+          (a.seasonality_top_months && a.seasonality_top_months.length
+            ? a.seasonality_top_months.join(", ")
+            : "–");
+        valSellers.textContent = formatNumber(a.sellers_count);
+        valNoname.textContent =
+          "% no-name: " +
+          (a.noname_share != null
+            ? (a.noname_share * 100).toFixed(1) + "%"
+            : "–");
+        valBuyout.textContent =
+          a.buyout_rate != null
+            ? (a.buyout_rate * 100).toFixed(1) + "%"
+            : "–";
+        valTop1.textContent =
+          "Топ-1: " +
+          (a.top1_share != null
+            ? (a.top1_share * 100).toFixed(1) + "%"
+            : "–");
+
+        valProfit.textContent =
+          c.profit_per_month != null
+            ? formatNumber(Math.round(c.profit_per_month)) + " ₽/мес"
+            : "–";
+        valRoi.textContent =
+          c.roi_percent != null && c.payback_months != null
+            ? `${c.roi_percent.toFixed(1)}% / ${c.payback_months.toFixed(
+                1
+              )} мес`
+            : "–";
+
+        valCost.textContent =
+          c.full_cost_per_unit != null
+            ? c.full_cost_per_unit.toFixed(2) + " ₽"
+            : "–";
+        valBreakeven.textContent =
+          c.break_even_price != null
+            ? c.break_even_price.toFixed(2) + " ₽"
+            : "–";
+        valMargin.textContent =
+          c.margin_percent != null
+            ? c.margin_percent.toFixed(1) + " %"
+            : "–";
+        valUnits.textContent =
+          c.units_by_budget != null ? c.units_by_budget : "–";
+
+        const trend = a.trend || "stable";
+        if (trend === "growth") {
+          trendPill.textContent = "РОСТ ▲";
+          trendPill.className = "pill pill-green";
+        } else if (trend === "fall") {
+          trendPill.textContent = "ПАДЕНИЕ ▼";
+          trendPill.className = "pill pill-red";
+        } else {
+          trendPill.textContent = "СТАБИЛЬНО →";
+          trendPill.className = "pill pill-yellow";
+        }
+
+        const vLabel = data.verdict_label || "yellow";
+        verdictBlock.className =
+          "verdict-block " +
+          (vLabel === "green"
+            ? "verdict-green"
+            : vLabel === "red"
+            ? "verdict-red"
+            : "verdict-yellow");
+
+        verdictTitle.textContent = "Вердикт: " + (data.verdict || "–");
+        verdictSub.textContent =
+          "Вердикт учитывает маржинальность, ROI и тренд ниши.";
+
+        const comps = a.top_competitors || [];
+        tblCompetitors.innerHTML = "";
+        if (!comps.length) {
+          const tr = document.createElement("tr");
+          const td = document.createElement("td");
+          td.colSpan = 4;
+          td.className = "muted";
+          td.textContent = "Нет данных по конкурентам.";
+          tr.appendChild(td);
+          tblCompetitors.appendChild(tr);
+        } else {
+          comps.forEach((c) => {
+            const tr = document.createElement("tr");
+            const td1 = document.createElement("td");
+            const td2 = document.createElement("td");
+            const td3 = document.createElement("td");
+            const td4 = document.createElement("td");
+            td1.textContent = c.name || "–";
+            td2.textContent = c.price != null ? c.price + " ₽" : "–";
+            td3.textContent =
+              c.sales_per_month != null ? c.sales_per_month : "–";
+            td4.textContent = c.rating != null ? c.rating : "–";
+            tr.appendChild(td1);
+            tr.appendChild(td2);
+            tr.appendChild(td3);
+            tr.appendChild(td4);
+            tblCompetitors.appendChild(tr);
+          });
+        }
+      }
+
+      async function saveToken() {
+        const token = inpToken.value.trim();
+        if (!token) {
+          tokenStatus.textContent = "Введите токен.";
+          return;
+        }
+        tokenStatus.textContent = "Сохраняю токен...";
+        try {
+          const resp = await fetch(`${apiBase}/settings/token`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: USER_ID, token }),
+          });
+          if (!resp.ok) {
+            throw new Error("Ошибка");
+          }
+          tokenStatus.textContent = "✅ Токен сохранён.";
+        } catch (e) {
+          tokenStatus.textContent =
+            "Ошибка при сохранении токена. Проверьте подключение.";
+        }
+      }
+
+      async function loadHistory() {
+        setStatus("Загружаю историю...");
+        try {
+          const resp = await fetch(`${apiBase}/history/${USER_ID}`);
+          if (!resp.ok) throw new Error("Ошибка history");
+          const items = await resp.json();
+          if (!items.length) {
+            setStatus("История пуста.");
+            return;
+          }
+          const last = items[0];
+          setStatus(
+            `Последний анализ: "${last.query}", платформа ${
+              last.platform
+            }, бюджет ${last.budget}, дата ${last.created_at}`
+          );
+        } catch (e) {
+          setStatus("Не удалось загрузить историю.");
+        }
+      }
+
+      btnAnalyze.addEventListener("click", callAnalyze);
+      btnSaveToken.addEventListener("click", saveToken);
+      btnHistory.addEventListener("click", loadHistory);
+
+      if (tg) {
+        tg.expand();
+      }
+    </script>
+  </body>
+</html>
+
