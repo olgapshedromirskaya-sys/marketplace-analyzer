@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from urllib.parse import quote_plus
+from urllib.parse import quote
 
 # Используем deep-translator вместо googletrans,
 # чтобы избежать конфликтов по зависимостям.
@@ -34,8 +34,12 @@ def build_1688_search(query: str) -> ChinaSearchResult:
         # В случае ошибки перевода просто используем исходный запрос
         chinese_query = query
 
-    encoded = quote_plus(chinese_query)
-    search_url = f"https://s.1688.com/selloffer/offer_search.htm?keywords={encoded}"
+    # Кодируем запрос для URL без замены пробелов на '+'
+    query_encoded = quote(chinese_query)
+
+    # 1688 часто требует авторизацию, поэтому используем
+    # международную версию Alibaba, которая открывается без логина
+    search_url = f"https://www.alibaba.com/trade/search?SearchText={query_encoded}"
 
     cny_to_rub = get_cny_rate_rub()
 

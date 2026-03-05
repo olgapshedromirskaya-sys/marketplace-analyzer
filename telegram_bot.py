@@ -41,6 +41,8 @@ from mpstats import MPStatsClient, NicheParams
 from calculator import CalcInput, calculate_unit_economics
 from china import build_1688_search
 from currency import get_cny_rate_rub
+from constants import WB_DEFAULTS
+from calculator_handler import build_calculator_conv
 
 
 logger = logging.getLogger(__name__)
@@ -61,25 +63,30 @@ class TokenStates(IntEnum):
 
 
 class CalcStates(IntEnum):
+    """
+    Стадии диалога финансового калькулятора.
+    """
+
+    NAME = auto()
     PURCHASE_PRICE = auto()
-    CURRENCY = auto()
-    WEIGHT = auto()
-    VOLUME = auto()
-    PLATFORM = auto()
-    COMMISSION = auto()
-    SPP = auto()
-    TAX = auto()
-    LOGISTICS = auto()
-    FULFILLMENT = auto()
-    ADS = auto()
-    OTHER_EXPENSES = auto()
-    BUDGET = auto()
     SALE_PRICE = auto()
-    NICHE_GROWTH = auto()
+    BUDGET = auto()
+    PLATFORM = auto()
+    TAX = auto()
 
 
 class ChinaStates(IntEnum):
     QUERY = auto()
+
+
+class AutoPickStates(IntEnum):
+    """
+    Стадии диалога автоматического подбора товара.
+    """
+
+    BUDGET = auto()
+    PLATFORM = auto()
+    MONTH = auto()
 
 
 # ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
@@ -91,6 +98,7 @@ def main_menu_keyboard() -> ReplyKeyboardMarkup:
     """
     kb = [
         [
+            KeyboardButton("🎯 Подобрать товар"),
             KeyboardButton("🔍 Анализ ниши"),
             KeyboardButton("💰 Калькулятор"),
         ],
@@ -455,28 +463,9 @@ async def calc_purchase_price(update: Update, context: ContextTypes.DEFAULT_TYPE
     except ValueError:
         await update.effective_chat.send_message("Не смог понять число, попробуйте ещё раз.")
         return CalcStates.PURCHASE_PRICE
-    context.user_data["calc_purchase_price"] = price
-    kb = ReplyKeyboardMarkup([["RUB", "CNY"]], resize_keyboard=True, one_time_keyboard=True)
-    await update.effective_chat.send_message(
-        "В какой валюте цена закупки? RUB или CNY.", reply_markup=kb
-    )
-    return CalcStates.CURRENCY
-
-
-async def calc_currency(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    cur = update.message.text.strip().upper()
-    price = context.user_data["calc_purchase_price"]
-    if cur == "CNY":
-        rate = get_cny_rate_rub()
-        price_rub = price * rate
-        context.user_data["calc_purchase_price_rub"] = price_rub
-        await update.effective_chat.send_message(
-            f"Конвертирую {price} CNY по курсу {rate:.2f} → {price_rub:.2f} ₽."
-        )
-    else:
-        context.user_data["calc_purchase_price_rub"] = price
-    await update.effective_chat.send_message("Введите вес товара (кг).")
-    return CalcStates.WEIGHT
+    context.user_data["calc_purchase_price_rub"] = price
+    await update.effective_chat.send_message("Введите цену продажи на WB в рублях:")
+    return CalcStates.SALE_PRICE
 
 
 async def calc_weight(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -747,6 +736,523 @@ async def china_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     return ConversationHandler.END
 
 
+# ===== АВТОМАТИЧЕСКИЙ ПОДБОР ТОВАРА =====
+
+
+async def autopick_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    Старт диалога автоматического подбора товара.
+    """
+    if not await ensure_access(update, context):
+        return ConversationHandler.END
+
+    await update.effective_chat.send_message(
+        "🎯 Автоматический подбор товара.\n\n"
+        "Сначала введите ваш бюджет в рублях (например: 100000)."
+    )
+    return AutoPickStates.BUDGET
+
+
+async def autopick_budget(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    Шаг 1 — бюджет.
+    """
+    try:
+        budget = float(update.message.text.replace(",", "."))
+    except ValueError:
+        await update.effective_chat.send_message("Не смог понять число. Введите бюджет ещё раз.")
+        return AutoPickStates.BUDGET
+
+    context.user_data["ap_budget"] = budget
+
+    kb = ReplyKeyboardMarkup(
+        [["WB", "Ozon", "Обе"]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+    await update.effective_chat.send_message(
+        "Платформа: WB / Ozon / Обе.", reply_markup=kb
+    )
+    return AutoPickStates.PLATFORM
+
+
+async def autopick_platform(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    Шаг 2 — выбираем платформу.
+    """
+    txt = update.message.text.strip().lower()
+    if txt.startswith("wb"):
+        plat = "wb"
+    elif txt.startswith("ozon"):
+        plat = "ozon"
+    else:
+        plat = "both"
+
+    context.user_data["ap_platform"] = plat
+
+    # Кнопки выбора месяца + «Пропустить»
+    month_kb = ReplyKeyboardMarkup(
+        [
+            ["Январь", "Февраль", "Март"],
+            ["Апрель", "Май", "Июнь"],
+            ["Июль", "Август", "Сентябрь"],
+            ["Октябрь", "Ноябрь", "Декабрь"],
+            ["⏭ Пропустить"],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+    await update.effective_chat.send_message(
+        "Выберите сезонный месяц или нажмите «⏭ Пропустить».",
+        reply_markup=month_kb,
+    )
+    return AutoPickStates.MONTH
+
+
+async def autopick_season(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    Шаг 3 — месяц сезона, затем запускаем подбор.
+    """
+    raw = update.message.text.strip()
+    lower = raw.lower()
+    # Любой вариант «пропустить» (в т.ч. кнопка «⏭ Пропустить») трактуем как отсутствие сезона
+    if "пропустить" in lower:
+        month = ""
+    else:
+        month = lower
+
+    budget = context.user_data.get("ap_budget", 0.0)
+    platform = context.user_data.get("ap_platform", "wb")
+
+    await update.effective_chat.send_message("Ищу подходящие товары, подождите 5–10 секунд...")
+
+    try:
+        await run_auto_selection(update, context, budget, platform, month)
+    except Exception:
+        await update.effective_chat.send_message(
+            "Произошла ошибка при подборе товара. Попробуйте ещё раз позже."
+        )
+
+    return ConversationHandler.END
+
+
+async def autopick_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    Отмена автоподбора.
+    """
+    await update.effective_chat.send_message("Подбор товара отменён.", reply_markup=main_menu_keyboard())
+    return ConversationHandler.END
+
+
+async def run_auto_selection(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    budget: float,
+    platform: str,
+    season_month: str,
+) -> None:
+    """
+    Основная логика автоподбора:
+    - вызывает MPStats для нескольких ниш (или использует демо);
+    - фильтрует ниши по заданным критериям;
+    - выбирает конкретные товары;
+    - считает юнит-экономику и отправляет развернутые карточки.
+    """
+    user_id = update.effective_user.id
+    has_token = get_mpstats_token(user_id) is not None
+
+    client = MPStatsClient()
+
+    # Набор базовых ниш (как для демо, так и для реального режима)
+    base_queries = [
+        ("Термос 500мл", "Термосы и термокружки"),
+        ("Органайзер для кабелей", "Органайзеры"),
+        ("Силиконовая форма для выпечки", "Товары для кухни"),
+        ("Чехол для AirPods", "Аксессуары для электроники"),
+        ("Массажный роллер", "Товары для спорта"),
+    ]
+
+    candidates = []
+
+    # Шаг 1 — собираем данные по нишам через MPStats (или демо)
+    for query_text, category in base_queries:
+        params = NicheParams(
+            user_id=user_id,
+            query=query_text,
+            budget=budget,
+            platform=platform,
+            period_months=3,
+        )
+        try:
+            analysis = client.analyze_niche(params)
+        except Exception:
+            analysis = client._demo_data(params, reason="exception")  # type: ignore
+
+        # Проверяем критерии ниши
+        if not niche_passes_filters(analysis, season_month):
+            continue
+
+        # Выбираем среди конкурентов 1–2 товаров в диапазоне продаж 500–5000 шт/мес
+        for comp in analysis.get("top_competitors", []):
+            sales = comp.get("sales_per_month") or 0
+            price = comp.get("price") or 0
+            rating = comp.get("rating") or 0.0
+
+            if not (500 <= sales <= 5000):
+                continue
+            if rating >= 4.7:
+                continue
+            if price <= 0:
+                continue
+            if price > budget:
+                # Если цена одной единицы выше всего бюджета — пропускаем
+                continue
+
+            candidates.append(
+                {
+                    "query": query_text,
+                    "category": category,
+                    "analysis": analysis,
+                    "comp": comp,
+                    "platform": platform,
+                }
+            )
+
+    if not candidates:
+        await update.effective_chat.send_message(
+            "😔 По вашим параметрам не найдено прибыльных товаров.\n"
+            "Попробуйте увеличить бюджет или изменить платформу."
+        )
+        return
+
+    # Шаг 2 — считаем юнит-экономику и фильтруем только прибыльные товары
+    profitable: list[Dict[str, Any]] = []
+
+    # Общие параметры для расчёта
+    d = WB_DEFAULTS
+    weight_kg = 0.5
+    volume_l = 2.0
+    cny_rate = get_cny_rate_rub()
+    usd_rate = cny_rate * 2
+
+    for item in candidates:
+        if len(profitable) >= 5:
+            break
+
+        analysis = item["analysis"]
+        comp = item["comp"]
+        sale_price = float(comp.get("price") or 0)
+        if sale_price <= 0:
+            continue
+
+        purchase_rub = sale_price * 0.2
+
+        inp = CalcInput(
+            purchase_price=purchase_rub,
+            weight_kg=weight_kg,
+            volume_l=volume_l,
+            platform="wb" if platform == "wb" else "ozon",
+            commission_percent=d.commission_default,
+            spp_percent=d.spp_percent_default,
+            tax_mode=d.tax_mode_default,  # type: ignore[arg-type]
+            logistics_usd_per_kg=d.logistics_usd_per_kg,
+            logistics_usd_to_rub=usd_rate,
+            fulfillment_rub_per_item=d.fulfillment_rub_per_item_default,
+            ads_percent=d.ads_percent_default,
+            other_expenses_rub=d.other_expenses_rub_default,
+            budget_rub=budget,
+        )
+
+        calc = calculate_unit_economics(
+            inputs=inp,
+            sale_price=sale_price,
+            is_niche_growing=(analysis.get("trend") == "growth"),
+        )
+
+        # ЖЁСТКИЕ ФИЛЬТРЫ прибыльности
+        if calc.profit_per_unit <= 0:
+            continue
+        if calc.margin_percent < 20:
+            continue
+        if calc.roi_percent < 50:
+            continue
+        if calc.payback_months > 1:
+            continue
+        if calc.profit_per_month < 15_000:
+            continue
+
+        profitable.append(item)
+
+    if not profitable:
+        await update.effective_chat.send_message(
+            "😔 По вашим параметрам не найдено прибыльных товаров.\n"
+            "Попробуйте увеличить бюджет или изменить платформу."
+        )
+        return
+
+    # Для каждого прибыльного кандидата отправляем карточку
+    for idx, item in enumerate(profitable, start=1):
+        await send_autopick_card(
+            update,
+            context,
+            idx,
+            item,
+            budget=budget,
+            platform=platform,
+            has_token=has_token,
+        )
+
+    if not has_token:
+        await update.effective_chat.send_message(
+            "🔑 Вы видите демо-подбор на основе тестовых данных.\n"
+            "Добавьте MPStats токен в настройках (команда /settoken), "
+            "чтобы получать реальные подборы под ваш аккаунт.",
+            reply_markup=main_menu_keyboard(),
+        )
+
+
+def niche_passes_filters(analysis: Dict[str, Any], season_month: str) -> bool:
+    """
+    Проверяет, проходит ли ниша фильтры из ТЗ.
+    Часть критериев воспроизводим приблизительно на основе имеющихся данных.
+    """
+    revenue = float(analysis.get("revenue_per_month") or 0)
+    sellers = int(analysis.get("sellers_count") or 0)
+    buyout = float(analysis.get("buyout_rate") or 0)
+    noname = float(analysis.get("noname_share") or 0)
+    top1 = float(analysis.get("top1_share") or 0)
+    trend = analysis.get("trend", "stable")
+
+    # Выручка ниши растёт (по тренду)
+    if trend != "growth":
+        return False
+
+    # Монополистов нет
+    if top1 >= 0.3:
+        return False
+
+    # no-name > 20%
+    if noname <= 0.2:
+        return False
+
+    # % выкупа > 40%
+    if buyout <= 0.4:
+        return False
+
+    # Продажи > 1000 шт/мес в нише (приблизительно оцениваем как выручка / средняя цена)
+    avg_price = 1000.0
+    approx_units = revenue / avg_price if avg_price > 0 else 0
+    if approx_units <= 1000:
+        return False
+
+    # Сезонность — если задан месяц, он должен входить в топ-месяцы
+    if season_month:
+        months = [m.lower() for m in analysis.get("seasonality_top_months", [])]
+        if season_month.lower() not in months:
+            return False
+
+    return True
+
+
+async def send_autopick_card(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    index: int,
+    item: Dict[str, Any],
+    budget: float,
+    platform: str,
+    has_token: bool,
+) -> None:
+    """
+    Формирует и отправляет текстовую карточку для одного подобранного товара.
+    """
+    analysis = item["analysis"]
+    comp = item["comp"]
+    query_text = item["query"]
+    category = item["category"]
+
+    name = comp.get("name") or query_text
+    sale_price = float(comp.get("price") or 0)
+    sales_per_month = int(comp.get("sales_per_month") or 0)
+
+    # Поиск на 1688
+    china_result = build_1688_search(name)
+
+    # В демо режиме закупочную цену берём как 20% от цены продажи,
+    # переведённую в юани по курсу ЦБ.
+    if has_token:
+        # Здесь в реальном режиме можно реализовать парсинг 1688.
+        purchase_rub = sale_price * 0.2
+    else:
+        purchase_rub = sale_price * 0.2
+
+    purchase_cny = purchase_rub / china_result.cny_to_rub if china_result.cny_to_rub > 0 else 0
+
+    # Берём средние значения WB из constants.py
+    d = WB_DEFAULTS
+
+    # Для простоты считаем средний вес и объём,
+    # в реальном режиме эти параметры можно уточнять.
+    weight_kg = 0.5
+    volume_l = 2.0
+
+    # Курс «доллар→рубль» на основе курса юаня (приближение)
+    cny_rate = china_result.cny_to_rub
+    usd_rate = cny_rate * 2
+
+    commission_percent = d.commission_default
+    spp_percent = d.spp_percent_default
+    ads_percent = d.ads_percent_default
+    tax_mode = d.tax_mode_default
+
+    # Считаем юнит-экономику через общий калькулятор
+    inp = CalcInput(
+        purchase_price=purchase_rub,
+        weight_kg=weight_kg,
+        volume_l=volume_l,
+        platform="wb" if platform == "wb" else "ozon",
+        commission_percent=commission_percent,
+        spp_percent=spp_percent,
+        tax_mode=tax_mode,
+        logistics_usd_per_kg=d.logistics_usd_per_kg,
+        logistics_usd_to_rub=usd_rate,
+        fulfillment_rub_per_item=d.fulfillment_rub_per_item_default,
+        ads_percent=ads_percent,
+        other_expenses_rub=d.other_expenses_rub_default,
+        budget_rub=budget,
+    )
+
+    calc = calculate_unit_economics(
+        inputs=inp,
+        sale_price=sale_price,
+        is_niche_growing=(analysis.get("trend") == "growth"),
+    )
+
+    # Подробный разбор расходов
+    wb_commission = sale_price * commission_percent / 100
+    wb_logistics = d.logistics_rub_per_unit
+    wb_storage = d.storage_rub_per_liter_per_day * volume_l * 30
+    spp = sale_price * spp_percent / 100
+    cn_logistics = d.logistics_usd_per_kg * usd_rate * weight_kg
+    ads_cost = sale_price * ads_percent / 100
+    ff = d.fulfillment_rub_per_item_default
+    other_per_unit = (
+        d.other_expenses_rub_default / calc.units_by_budget if calc.units_by_budget else 0
+    )
+
+    # Налог считаем из разницы дохода и суммарных затрат до налога
+    pre_tax_margin = (
+        sale_price
+        - wb_commission
+        - wb_logistics
+        - wb_storage
+        - spp
+        - purchase_rub
+        - cn_logistics
+        - ads_cost
+        - ff
+        - other_per_unit
+    )
+    if tax_mode == "usn_6":
+        tax = max(pre_tax_margin, 0) * 0.06
+    else:
+        tax = max(pre_tax_margin, 0) * 0.15
+
+    net_profit_per_unit = pre_tax_margin - tax
+
+    # Данные ниши
+    revenue = float(analysis.get("revenue_per_month") or 0)
+    sellers = int(analysis.get("sellers_count") or 0)
+    buyout = float(analysis.get("buyout_rate") or 0)
+    trend = analysis.get("trend", "stable")
+    trend_text = "СТАБИЛЬНО"
+    if trend == "growth":
+        trend_text = "▲ РОСТ"
+    elif trend == "fall":
+        trend_text = "▼ ПАДЕНИЕ"
+
+    missed_revenue = float(analysis.get("missed_revenue_amount") or 0)
+
+    # Топ-3 конкурента для отображения с расшифровкой
+    top3_lines = []
+    for i, c in enumerate(analysis.get("top_competitors", [])[:3], start=1):
+        cname = c.get("name") or "—"
+        cprice = float(c.get("price") or 0)
+        csales = int(c.get("sales_per_month") or 0)
+        crating = float(c.get("rating") or 0)
+        # Выручка конкурента = цена × продажи/мес
+        crevenue = cprice * csales
+        # Если нет индивидуального % выкупа — берём общий по нише
+        cbuyout = float(c.get("buyout_rate") or buyout) * 100
+
+        top3_lines.append(
+            f"{i}. {cname}\n"
+            f"   💰 Цена: {cprice:,.0f} ₽\n"
+            f"   📦 Продаж: {csales} шт/мес\n"
+            f"   💵 Выручка: {crevenue:,.0f} ₽/мес\n"
+            f"   ⭐ Рейтинг: {crating:.1f}\n"
+            f"   🔄 Выкуп: {cbuyout:.0f}%"
+        )
+    if not top3_lines:
+        top3_lines.append("Нет данных по конкурентам.")
+
+    demo_tag = "(демо) " if (analysis.get("demo") or not has_token) else ""
+
+    card = (
+        "═══════════════════════\n"
+        f"🎯 ТОВАР: {name}\n"
+        f"📦 Категория: {category}\n"
+        "═══════════════════════\n\n"
+        f"📊 ДАННЫЕ НИШИ {demo_tag}:\n"
+        f"- Выручка ниши: {revenue:,.0f} руб/мес\n"
+        f"- Продавцов: {sellers}\n"
+        f"- % выкупа: {buyout*100:.1f}%\n"
+        f"- Тренд: {trend_text}\n"
+        f"- Монополист: ❌ Нет\n"
+        f"- Упущенная выручка: {missed_revenue:,.0f} руб/мес\n\n"
+        "🏆 КОНКУРЕНТЫ (топ-3):\n"
+        + "\n".join(top3_lines)
+        + "\n\n"
+        f"🇨🇳 ЗАКУПКА НА 1688:\n"
+        f"- Примерная цена: {purchase_cny:.2f}¥ ({purchase_rub:.0f}₽)\n"
+        f"- Партия на бюджет: {calc.units_by_budget} шт\n"
+        f"- Ссылка: {china_result.search_url}\n\n"
+        "💰 ЮНИТ-ЭКОНОМИКА:\n"
+        f"- Цена продажи: {sale_price:.0f}₽\n"
+        f"- Себестоимость (полная): {calc.full_cost_per_unit:.0f}₽/шт\n"
+        f"- Маржинальность: {calc.margin_percent:.1f}%\n"
+        f"- ROI: {calc.roi_percent:.1f}%\n"
+        f"- Окупаемость: {calc.payback_months:.1f} мес\n"
+        f"- Прибыль/мес: {calc.profit_per_month:.0f}₽\n\n"
+        f"{calc.verdict} ВЕРДИКТ\n\n"
+        "ЦЕНА ПРОДАЖИ: {price:.0f} ₽\n"
+        "─────────────────────\n"
+        f"ВЫЧИТАЕМ:\n"
+        f"- Комиссия ВБ ({commission_percent:.0f}%):        — {wb_commission:.0f} ₽\n"
+        f"- Логистика ВБ (среднее):   — {wb_logistics:.0f} ₽\n"
+        f"- Хранение ВБ (среднее):    — {wb_storage:.0f} ₽\n"
+        f"- СПП ({spp_percent:.0f}%):                 — {spp:.0f} ₽\n"
+        f"- Себестоимость товара:     — {purchase_rub:.0f} ₽\n"
+        f"- Логистика из Китая:       — {cn_logistics:.0f} ₽\n"
+        f"- Реклама ({ads_percent:.0f}%):            — {ads_cost:.0f} ₽\n"
+        f"- Налог УСН:                 — {tax:.0f} ₽\n"
+        f"- Фулфилмент:               — {ff:.0f} ₽\n"
+        f"- Прочие (/ед.):            — {other_per_unit:.0f} ₽\n"
+        "─────────────────────\n"
+        f"ЧИСТАЯ ПРИБЫЛЬ:              {net_profit_per_unit:.0f} ₽/шт\n\n"
+        "⚠️ Расчёт ориентировочный — логистика и хранение зависят от конкретного склада WB.\n"
+        "═══════════════════════"
+    ).format(price=sale_price)
+
+    keyboard = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("🇨🇳 Открыть на 1688", url=china_result.search_url)],
+        ]
+    )
+
+    await update.effective_chat.send_message(card, reply_markup=keyboard)
+
+
 # ===== НАСТРОЙКИ =====
 
 
@@ -769,13 +1275,10 @@ async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     text = update.message.text.strip()
-    if text.startswith("🔍"):
-        await analyze_entry(update, context)
-    elif text.startswith("💰"):
-        await calc_entry(update, context)
-    elif text.startswith("🇨🇳"):
-        await china_entry(update, context)
-    elif text.startswith("📊"):
+    # Диалоги (анализ ниши, калькулятор, подбор товара, поиск на 1688)
+    # обрабатываются через ConversationHandler, поэтому здесь
+    # оставляем только простые действия.
+    if text.startswith("📊"):
         await history_cmd(update, context)
     elif text.startswith("⚙️"):
         await settings_menu(update, context)
@@ -817,7 +1320,10 @@ def build_application() -> Application:
     )
     app.add_handler(token_conv)
     analyze_conv = ConversationHandler(
-        entry_points=[CommandHandler("analyze", analyze_entry)],
+        entry_points=[
+            CommandHandler("analyze", analyze_entry),
+            MessageHandler(filters.Regex(r"^🔍 Анализ ниши"), analyze_entry),
+        ],
         states={
             AnalyzeStates.KEYWORD: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_keyword)
@@ -835,60 +1341,35 @@ def build_application() -> Application:
         fallbacks=[CommandHandler("cancel", analyze_entry)],
     )
     app.add_handler(analyze_conv)
-    calc_conv = ConversationHandler(
-        entry_points=[CommandHandler("calc", calc_entry)],
+    # Калькулятор — вынесен в отдельный модуль calculator_handler.py
+    app.add_handler(build_calculator_conv())
+
+    # Автоподбор товара
+    autopick_conv = ConversationHandler(
+        entry_points=[
+            CommandHandler("autopick", autopick_entry),
+            MessageHandler(filters.Regex(r"^🎯 Подобрать товар"), autopick_entry),
+        ],
         states={
-            CalcStates.PURCHASE_PRICE: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_purchase_price)
+            AutoPickStates.BUDGET: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, autopick_budget)
             ],
-            CalcStates.CURRENCY: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_currency)
+            AutoPickStates.PLATFORM: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, autopick_platform)
             ],
-            CalcStates.WEIGHT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_weight)
-            ],
-            CalcStates.VOLUME: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_volume)
-            ],
-            CalcStates.PLATFORM: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_platform)
-            ],
-            CalcStates.COMMISSION: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_commission)
-            ],
-            CalcStates.SPP: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_spp)
-            ],
-            CalcStates.TAX: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_tax)
-            ],
-            CalcStates.LOGISTICS: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_logistics)
-            ],
-            CalcStates.FULFILLMENT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_fulfillment)
-            ],
-            CalcStates.ADS: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_ads)
-            ],
-            CalcStates.OTHER_EXPENSES: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_other)
-            ],
-            CalcStates.BUDGET: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_budget)
-            ],
-            CalcStates.SALE_PRICE: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_sale_price)
-            ],
-            CalcStates.NICHE_GROWTH: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_niche_growth)
+            AutoPickStates.MONTH: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, autopick_season)
             ],
         },
-        fallbacks=[CommandHandler("cancel", calc_cancel)],
+        fallbacks=[CommandHandler("cancel", autopick_cancel)],
     )
-    app.add_handler(calc_conv)
+    app.add_handler(autopick_conv)
+
     china_conv = ConversationHandler(
-        entry_points=[CommandHandler("china", china_entry)],
+        entry_points=[
+            CommandHandler("china", china_entry),
+            MessageHandler(filters.Regex(r"^🇨🇳 Найти на 1688"), china_entry),
+        ],
         states={
             ChinaStates.QUERY: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, china_query)

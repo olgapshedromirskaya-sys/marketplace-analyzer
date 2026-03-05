@@ -107,6 +107,9 @@ class MPStatsClient:
 
         trend = "growth" if params.period_months in (1, 3) else "stable"
 
+        # Реалистичные конкуренты в зависимости от типа ниши
+        top_competitors = self._demo_competitors(params)
+
         return {
             "demo": True,
             "demo_reason": reason,
@@ -126,39 +129,226 @@ class MPStatsClient:
                 {"segment": "средний", "revenue_share": 0.5},
                 {"segment": "высокий", "revenue_share": 0.25},
             ],
-            "top_competitors": [
+            "top_competitors": top_competitors,
+        }
+
+    def _demo_competitors(self, params: NicheParams) -> List[Dict[str, Any]]:
+        """
+        Возвращает реалистичные демо-конкуренты для разных базовых категорий.
+
+        Используется в том числе в режиме «Подобрать товар», чтобы карточки
+        выглядели как реальные товары с WB.
+        """
+        q = params.query.lower()
+
+        # 1. Термосы
+        if "термос" in q:
+            return [
                 {
-                    "name": "Бренд A",
-                    "price": 1490,
-                    "sales_per_month": 900,
-                    "rating": 4.7,
-                },
-                {
-                    "name": "Бренд B",
-                    "price": 1290,
-                    "sales_per_month": 750,
-                    "rating": 4.5,
-                },
-                {
-                    "name": "Бренд C",
-                    "price": 1790,
-                    "sales_per_month": 600,
+                    "name": "Термос Арктика 106-500 стальной 500 мл",
+                    "price": 1890,
+                    "sales_per_month": 1200,
                     "rating": 4.8,
                 },
                 {
-                    "name": "Бренд D",
-                    "price": 990,
-                    "sales_per_month": 500,
-                    "rating": 4.3,
-                },
-                {
-                    "name": "Бренд E",
+                    "name": "Термокружка LaPlaya Office 500 мл нержавеющая сталь",
                     "price": 1590,
-                    "sales_per_month": 450,
+                    "sales_per_month": 950,
                     "rating": 4.6,
                 },
-            ],
-        }
+                {
+                    "name": "Термос Biostal NBP-500 туристический 500 мл",
+                    "price": 1390,
+                    "sales_per_month": 780,
+                    "rating": 4.7,
+                },
+                {
+                    "name": "Термос спортивный Tiger 0.5 л с поилкой",
+                    "price": 2290,
+                    "sales_per_month": 620,
+                    "rating": 4.9,
+                },
+                {
+                    "name": "Термос для еды Thermos King 470 мл",
+                    "price": 2590,
+                    "sales_per_month": 540,
+                    "rating": 4.8,
+                },
+            ]
+
+        # 2. Органайзеры для кабелей
+        if "органайзер" in q or "кабел" in q:
+            return [
+                {
+                    "name": "Органайзер для проводов Baseus Cube настольный",
+                    "price": 690,
+                    "sales_per_month": 1100,
+                    "rating": 4.7,
+                },
+                {
+                    "name": "Органайзер сумка для кабелей UGREEN двойной чехол",
+                    "price": 1290,
+                    "sales_per_month": 830,
+                    "rating": 4.8,
+                },
+                {
+                    "name": "Органайзер для кабелей Xiaomi Youpin настенный набор 10 шт",
+                    "price": 490,
+                    "sales_per_month": 1500,
+                    "rating": 4.6,
+                },
+                {
+                    "name": "Сумка-органайзер для электроники Mark Ryden Compact",
+                    "price": 1590,
+                    "sales_per_month": 540,
+                    "rating": 4.7,
+                },
+                {
+                    "name": "Органайзер для проводов силиконовый 5 каналов",
+                    "price": 350,
+                    "sales_per_month": 1900,
+                    "rating": 4.5,
+                },
+            ]
+
+        # 3. Силиконовые формы для выпечки
+        if "форма" in q or "выпеч" in q:
+            return [
+                {
+                    "name": "Форма силиконовая Доляна для кексов 6 ячеек",
+                    "price": 490,
+                    "sales_per_month": 1400,
+                    "rating": 4.8,
+                },
+                {
+                    "name": "Форма для кексов TimA силиконовая 12 ячеек",
+                    "price": 690,
+                    "sales_per_month": 980,
+                    "rating": 4.7,
+                },
+                {
+                    "name": "Набор форм для выпечки Marmiton сердечки 6 шт",
+                    "price": 790,
+                    "sales_per_month": 760,
+                    "rating": 4.6,
+                },
+                {
+                    "name": "Форма силиконовая Bradex для маффинов 24 ячейки",
+                    "price": 1190,
+                    "sales_per_month": 520,
+                    "rating": 4.7,
+                },
+                {
+                    "name": "Форма для хлеба Appetite силиконовая 26×11 см",
+                    "price": 650,
+                    "sales_per_month": 680,
+                    "rating": 4.5,
+                },
+            ]
+
+        # 4. Чехлы для AirPods
+        if "airpods" in q:
+            return [
+                {
+                    "name": "Чехол силиконовый для AirPods 2/1 с карабином",
+                    "price": 390,
+                    "sales_per_month": 2100,
+                    "rating": 4.6,
+                },
+                {
+                    "name": "Чехол ESR Hybrid для AirPods Pro TPU + пластик",
+                    "price": 890,
+                    "sales_per_month": 980,
+                    "rating": 4.7,
+                },
+                {
+                    "name": "Чехол для AirPods 3 Spigen Rugged Armor",
+                    "price": 1290,
+                    "sales_per_month": 650,
+                    "rating": 4.8,
+                },
+                {
+                    "name": "Чехол силиконовый для AirPods Pro с ушками",
+                    "price": 450,
+                    "sales_per_month": 1500,
+                    "rating": 4.5,
+                },
+                {
+                    "name": "Чехол-книжка для AirPods Pro 2 кожзам",
+                    "price": 990,
+                    "sales_per_month": 430,
+                    "rating": 4.4,
+                },
+            ]
+
+        # 5. Массажные роллеры
+        if "роллер" in q or "массаж" in q:
+            return [
+                {
+                    "name": "Массажный роллер Lite Weights EVA 45 см",
+                    "price": 1590,
+                    "sales_per_month": 870,
+                    "rating": 4.7,
+                },
+                {
+                    "name": "Роллер для пилатеса Starfit FA-502 60 см",
+                    "price": 1890,
+                    "sales_per_month": 720,
+                    "rating": 4.8,
+                },
+                {
+                    "name": "Массажный валик Bradex «Рельеф» 33 см",
+                    "price": 1390,
+                    "sales_per_month": 960,
+                    "rating": 4.6,
+                },
+                {
+                    "name": "Роллер с шипами для миофасциального массажа Indigo 33 см",
+                    "price": 1790,
+                    "sales_per_month": 540,
+                    "rating": 4.7,
+                },
+                {
+                    "name": "Набор массажный роллер + мяч Record",
+                    "price": 2190,
+                    "sales_per_month": 430,
+                    "rating": 4.5,
+                },
+            ]
+
+        # Запасной вариант — обобщённые, но правдоподобные названия
+        return [
+            {
+                "name": "Товар без бренда стандарт",
+                "price": 1490,
+                "sales_per_month": 900,
+                "rating": 4.6,
+            },
+            {
+                "name": "Товар популярный средний сегмент",
+                "price": 1290,
+                "sales_per_month": 750,
+                "rating": 4.5,
+            },
+            {
+                "name": "Товар премиум категория",
+                "price": 1790,
+                "sales_per_month": 600,
+                "rating": 4.8,
+            },
+            {
+                "name": "Товар бюджетный вариант",
+                "price": 990,
+                "sales_per_month": 500,
+                "rating": 4.3,
+            },
+            {
+                "name": "Товар брендовый массовый",
+                "price": 1590,
+                "sales_per_month": 450,
+                "rating": 4.6,
+            },
+        ]
 
 
 __all__ = ["MPStatsClient", "NicheParams"]
