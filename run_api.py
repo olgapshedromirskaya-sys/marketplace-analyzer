@@ -1,0 +1,15 @@
+"""
+Запуск только FastAPI сервера.
+Команда: python3 run_api.py
+"""
+import uvicorn
+
+from api import app
+from config import settings
+
+if __name__ == "__main__":
+    uvicorn.run(
+        app,
+        host=settings.api_host,
+        port=settings.api_port,
+    )

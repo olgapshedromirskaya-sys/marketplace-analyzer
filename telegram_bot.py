@@ -116,7 +116,7 @@ def access_denied_text() -> str:
     """
     Сообщение при отсутствии доступа.
     """
-    return "⛔ Доступ закрыт. Напишите администратору @olgapshedromirskaya"
+    return "⛔ Доступ закрыт. Для получения доступа обратитесь к администратору."
 
 
 def user_is_admin(user_id: int) -> bool:
@@ -154,16 +154,17 @@ async def ensure_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Обработчик команды /start.
+    При отсутствии доступа — только текст отказа, без кнопок меню.
     """
-    user = update.effective_user
+    if not user_allowed(update):
+        await update.effective_chat.send_message(access_denied_text())
+        return
+
     text = (
         "👋 Привет! Это бот анализа ниш маркетплейсов.\n\n"
         "Используйте кнопки в меню ниже.\n\n"
         "Команда /myid покажет ваш Telegram ID."
     )
-    if not user_allowed(update):
-        text += "\n\n" + access_denied_text()
-
     await update.effective_chat.send_message(text, reply_markup=main_menu_keyboard())
 
 
