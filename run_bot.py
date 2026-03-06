@@ -1,43 +1,32 @@
 """
-Запуск только Telegram-бота.
+Запуск Telegram-бота и FastAPI для деплоя на Render.
 Команда: python3 run_bot.py
 
-Для деплоя на Render добавлен простой HTTP health-check сервер,
-который отвечает на GET-запросы строкой 'Bot is running'.
+- Главный поток: Telegram бот (long polling).
+- Поток 1: FastAPI (uvicorn) на PORT — /webapp, /api/*.
+- Поток 2: простой health-check на отдельном порту (опционально).
 """
 
 import os
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
 
+import uvicorn
+
+from api import app as fastapi_app
 from telegram_bot import build_application
 
 
-class Handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"Bot is running")
-
-    def log_message(self, format, *args):
-        # Отключаем лишний лог HTTP-сервера, чтобы не засорять логи Render
-        pass
-
-
-def run_health_server():
-    """
-    Простой HTTP-сервер для Render на порту из переменной PORT.
-    """
+def run_fastapi():
+    """Запуск FastAPI на PORT из окружения (для Render)."""
     port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(("0.0.0.0", port), Handler)
-    server.serve_forever()
+    uvicorn.run(fastapi_app, host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":
-    # Запускаем health-check сервер в отдельном daemon-потоке
-    health_thread = threading.Thread(target=run_health_server, daemon=True)
-    health_thread.start()
+    # Поток 1: FastAPI (веб и WebApp на /webapp)
+    api_thread = threading.Thread(target=run_fastapi, daemon=True)
+    api_thread.start()
 
-    # Запускаем Telegram-бота (long polling)
+    # Главный поток: Telegram бот
     app = build_application()
     app.run_polling()

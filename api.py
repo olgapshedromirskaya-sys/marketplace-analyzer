@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from config import settings
@@ -69,6 +70,14 @@ def health() -> Dict[str, str]:
     Простой health-check для Render.
     """
     return {"status": "ok", "time": datetime.utcnow().isoformat()}
+
+
+@app.get("/webapp")
+async def webapp():
+    """
+    Отдача WebApp дашборда (index.html).
+    """
+    return FileResponse("webapp/index.html")
 
 
 @app.post("/api/analyze", response_model=AnalyzeResponse)

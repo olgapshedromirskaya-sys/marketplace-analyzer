@@ -113,7 +113,7 @@ def main_menu_keyboard() -> ReplyKeyboardMarkup:
         [
             KeyboardButton(
                 "🚀 Открыть WebApp",
-                web_app=WebAppInfo(url=getattr(settings, "webapp_url", "https://example.com")),
+                web_app=WebAppInfo(url="https://marketplace-analyzer.onrender.com/webapp"),
             ),
         ],
     ]
