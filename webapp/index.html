@@ -508,14 +508,37 @@
         }
       });
 
-      // Autopick
+      // Autopодбор
       let currentPlatform = "wb";
+      let currentMonth = "";
+      let currentTaxRate = 0.06;
+
       const platformBtns = document.querySelectorAll(".pillbtn[data-platform]");
       platformBtns.forEach((b) => {
         b.addEventListener("click", () => {
           platformBtns.forEach((x) => x.classList.remove("active"));
           b.classList.add("active");
           currentPlatform = b.dataset.platform;
+        });
+      });
+
+      const monthBtns = document.querySelectorAll(
+        "#month-btns .pillbtn[data-month]"
+      );
+      monthBtns.forEach((b) => {
+        b.addEventListener("click", () => {
+          monthBtns.forEach((x) => x.classList.remove("active"));
+          b.classList.add("active");
+          currentMonth = b.dataset.month || "";
+        });
+      });
+
+      const taxBtns = document.querySelectorAll("#tax-btns .pillbtn[data-tax]");
+      taxBtns.forEach((b) => {
+        b.addEventListener("click", () => {
+          taxBtns.forEach((x) => x.classList.remove("active"));
+          b.classList.add("active");
+          currentTaxRate = parseFloat(b.dataset.tax || "0.06");
         });
       });
 
@@ -572,13 +595,19 @@
 
         try {
           const resp = await fetch(
-            `/api/find-products?budget=${encodeURIComponent(budget)}&platform=${encodeURIComponent(
-              currentPlatform
-            )}`
+            `/api/find-products?budget=${encodeURIComponent(
+              budget
+            )}&platform=${encodeURIComponent(currentPlatform)}`
           );
           if (!resp.ok) throw new Error("api error");
           const data = await resp.json();
-          const filtered = applyClientFilters(data);
+          const enriched = data.map((p) => ({
+            ...p,
+            _budget: budget,
+            _month: currentMonth,
+            _taxRate: currentTaxRate,
+          }));
+          const filtered = applyClientFilters(enriched);
           if (!filtered.length) {
             pickStatus.textContent =
               "😔 По вашим фильтрам не найдено подходящих товаров. Попробуйте снизить пороги в настройках.";
@@ -592,7 +621,7 @@
           pickStatus.textContent = `Найдено товаров: ${Math.min(filtered.length, 5)}.`;
         } catch (e) {
           // Демо режим: если API недоступно
-          const demo = applyClientFilters([
+          const demoRaw = [
             {
               title: "🎯 Термос 500мл Xiaomi (нерж. сталь)",
               category: "Термосы и термокружки",
@@ -658,7 +687,15 @@
               china_url:
                 "https://www.alibaba.com/trade/search?SearchText=foam%20roller",
             },
-          ]);
+          ];
+          const demo = applyClientFilters(
+            demoRaw.map((p) => ({
+              ...p,
+              _budget: budget,
+              _month: currentMonth,
+              _taxRate: currentTaxRate,
+            }))
+          );
           currentProducts = demo.slice(0, 5);
           results.innerHTML = currentProducts
             .map((p, idx) => cardHtml(p, idx))
