@@ -670,33 +670,25 @@
           profitPerMonth > 0 ? batchCost / profitPerMonth : 0;
 
         // Вердикт по жёстким правилам
-        let verdictType = "yellow";
-        // БРАТЬ (зелёный)
-        if (
-          netProfitPerUnit > 0 &&
-          marginPercent >= 20 &&
-          roiPercent >= 50 &&
-          paybackMonths <= 1
-        ) {
-          verdictType = "green";
-        }
-        // НЕ БРАТЬ (красный)
-        else if (
-          marginPercent < 10 ||
-          netProfitPerUnit <= 0 ||
-          paybackMonths > 2
-        ) {
-          verdictType = "red";
-        } else if (
-          (marginPercent >= 10 && marginPercent < 20) ||
-          (paybackMonths > 1 && paybackMonths <= 2)
-        ) {
-          verdictType = "yellow";
-        }
+        // Вердикт по жёстким правилам:
+        // БРАТЬ: buyout >=70%, маржа >=25%, ROI >=80%, окупаемость <1, чистая прибыль >50
+        let verdictType = "red";
+        let verdictText = "🔴 НЕ БРАТЬ";
 
-        let verdictText = "🟡 РИСК";
-        if (verdictType === "green") verdictText = "🟢 БРАТЬ";
-        if (verdictType === "red") verdictText = "🔴 НЕ БРАТЬ";
+        const niche = DEMO_DETAILS[p.title]?.niche || {};
+        const nicheBuyout = (niche.buyout_rate ?? p.buyout_rate ?? 0) * 100;
+
+        const buyoutOk = nicheBuyout >= 70;
+        const econOk =
+          netProfitPerUnit > 50 &&
+          marginPercent >= 25 &&
+          roiPercent >= 80 &&
+          paybackMonths < 1;
+
+        if (buyoutOk && econOk) {
+          verdictType = "green";
+          verdictText = "🟢 БРАТЬ";
+        }
 
         return {
           salePrice,
@@ -760,13 +752,34 @@
           p.margin_percent = calc.marginPercent;
           p.roi_percent = calc.roiPercent;
           p.profit_per_month = calc.profitPerMonth;
+          const niche = DEMO_DETAILS[p.title]?.niche || {};
+          const nicheBuyout = (niche.buyout_rate ?? p.buyout_rate ?? 0) * 100;
+          const comps = DEMO_DETAILS[p.title]?.competitors || [];
 
-          // Должны пройти пользовательский фильтр
-          if (calc.marginPercent < minMargin || calc.roiPercent < minRoi) {
+          // Жёсткие фильтры
+          if (nicheBuyout < 70) return false;
+
+          // Каждый конкурент, если есть buyout_rate — не ниже 70%
+          if (
+            comps.length &&
+            comps.some((c) => (c.buyout_rate ?? niche.buyout_rate ?? 0) * 100 < 70)
+          ) {
             return false;
           }
-          // И не попадать в "НЕ БРАТЬ"
-          if (calc.verdictType === "red") {
+
+          if (
+            !(
+              calc.netProfitPerUnit > 50 &&
+              calc.marginPercent >= 25 &&
+              calc.roiPercent >= 80 &&
+              calc.paybackMonths < 1
+            )
+          ) {
+            return false;
+          }
+
+          // Дополнительно уважаем пользовательские пороги
+          if (calc.marginPercent < minMargin || calc.roiPercent < minRoi) {
             return false;
           }
           return true;
@@ -1004,7 +1017,7 @@
           niche: {
             revenue: 45_000_000,
             sellers: 120,
-            buyout_rate: 0.6,
+            buyout_rate: 0.8,
             trend: "growth",
             seasonality: ["март", "апрель", "ноябрь"],
             missed_revenue: 8_500_000,
@@ -1015,21 +1028,21 @@
               price: 1890,
               sales_per_month: 1200,
               rating: 4.8,
-              buyout_rate: 0.65,
+              buyout_rate: 0.78,
             },
             {
               name: "Термокружка LaPlaya Office 500 мл нержавеющая сталь",
               price: 1590,
               sales_per_month: 950,
               rating: 4.6,
-              buyout_rate: 0.58,
+              buyout_rate: 0.75,
             },
             {
               name: "Термос Biostal NBP-500 туристический 500 мл",
               price: 1390,
               sales_per_month: 780,
               rating: 4.7,
-              buyout_rate: 0.61,
+              buyout_rate: 0.72,
             },
           ],
           verdict: "🟢 БРАТЬ",
@@ -1039,7 +1052,7 @@
           niche: {
             revenue: 12_000_000,
             sellers: 80,
-            buyout_rate: 0.55,
+            buyout_rate: 0.78,
             trend: "growth",
             seasonality: ["январь", "февраль", "сентябрь"],
             missed_revenue: 1_800_000,
@@ -1050,21 +1063,21 @@
               price: 690,
               sales_per_month: 1100,
               rating: 4.7,
-              buyout_rate: 0.6,
+              buyout_rate: 0.74,
             },
             {
               name: "Органайзер сумка для кабелей UGREEN двойной чехол",
               price: 1290,
               sales_per_month: 830,
               rating: 4.8,
-              buyout_rate: 0.57,
+              buyout_rate: 0.72,
             },
             {
               name: "Органайзер для кабелей Xiaomi Youpin настенный набор",
               price: 490,
               sales_per_month: 1500,
               rating: 4.6,
-              buyout_rate: 0.52,
+              buyout_rate: 0.7,
             },
           ],
           verdict: "🟢 БРАТЬ",
@@ -1074,7 +1087,7 @@
           niche: {
             revenue: 28_000_000,
             sellers: 95,
-            buyout_rate: 0.48,
+            buyout_rate: 0.76,
             trend: "growth",
             seasonality: ["декабрь", "январь", "март"],
             missed_revenue: 4_200_000,
@@ -1085,21 +1098,21 @@
               price: 490,
               sales_per_month: 1400,
               rating: 4.8,
-              buyout_rate: 0.53,
+              buyout_rate: 0.73,
             },
             {
               name: "Форма для кексов TimA силиконовая 12 ячеек",
               price: 690,
               sales_per_month: 980,
               rating: 4.7,
-              buyout_rate: 0.5,
+              buyout_rate: 0.71,
             },
             {
               name: "Набор форм для выпечки Marmiton сердечки 6 шт",
               price: 790,
               sales_per_month: 760,
               rating: 4.6,
-              buyout_rate: 0.47,
+              buyout_rate: 0.7,
             },
           ],
           verdict: "🟢 БРАТЬ",
@@ -1109,7 +1122,7 @@
           niche: {
             revenue: 18_000_000,
             sellers: 150,
-            buyout_rate: 0.5,
+            buyout_rate: 0.72,
             trend: "stable",
             seasonality: ["сентябрь", "октябрь", "ноябрь"],
             missed_revenue: 2_100_000,
@@ -1120,21 +1133,21 @@
               price: 390,
               sales_per_month: 2100,
               rating: 4.6,
-              buyout_rate: 0.55,
+              buyout_rate: 0.7,
             },
             {
               name: "Чехол ESR Hybrid для AirPods Pro TPU + пластик",
               price: 890,
               sales_per_month: 980,
               rating: 4.7,
-              buyout_rate: 0.5,
+              buyout_rate: 0.72,
             },
             {
               name: "Чехол для AirPods 3 Spigen Rugged Armor",
               price: 1290,
               sales_per_month: 650,
               rating: 4.8,
-              buyout_rate: 0.52,
+              buyout_rate: 0.74,
             },
           ],
           verdict: "🟡 РИСК",
@@ -1144,7 +1157,7 @@
           niche: {
             revenue: 22_000_000,
             sellers: 60,
-            buyout_rate: 0.58,
+            buyout_rate: 0.82,
             trend: "growth",
             seasonality: ["февраль", "март", "апрель"],
             missed_revenue: 3_300_000,
@@ -1155,21 +1168,21 @@
               price: 1590,
               sales_per_month: 870,
               rating: 4.7,
-              buyout_rate: 0.6,
+              buyout_rate: 0.78,
             },
             {
               name: "Роллер для пилатеса Starfit FA-502 60 см",
               price: 1890,
               sales_per_month: 720,
               rating: 4.8,
-              buyout_rate: 0.55,
+              buyout_rate: 0.74,
             },
             {
               name: "Массажный валик Bradex «Рельеф» 33 см",
               price: 1390,
               sales_per_month: 960,
               rating: 4.6,
-              buyout_rate: 0.57,
+              buyout_rate: 0.72,
             },
           ],
           verdict: "🟢 БРАТЬ",
