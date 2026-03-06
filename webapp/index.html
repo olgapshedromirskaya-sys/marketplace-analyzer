@@ -722,16 +722,24 @@
       }
 
       function cardHtml(p, idx) {
+        const extra = DEMO_DETAILS[p.title] || {};
+        const niche = extra.niche || {};
+        const buyout = (niche.buyout_rate ?? p.buyout_rate ?? 0) * 100;
         return `
           <div class="card">
             <div class="product-title">${p.title}</div>
             <div class="kv">
               <div>📦 <b>Категория:</b> ${p.category}</div>
               <div>💰 <b>Цена продажи:</b> ${fmtMoney(p.sale_price)} ₽</div>
-              <div>📈 <b>Выручка ниши:</b> ${fmtMoney(p.niche_revenue / 1_000_000)}М ₽</div>
+              <div>📈 <b>Выручка ниши:</b> ${fmtMoney(
+                Math.round((p.niche_revenue || 0) / 100) * 100
+              )} ₽</div>
               <div>✅ <b>Монополист:</b> ${p.monopolist ? "ДА" : "НЕТ"}</div>
               <div>💵 <b>Прибыль/мес:</b> ${fmtMoney(p.profit_per_month)} ₽</div>
-              <div>📊 <b>Маржа:</b> ${p.margin_percent}% | <b>ROI:</b> ${p.roi_percent}%</div>
+              <div>🔄 <b>Выкуп:</b> ${Math.round(buyout)}%</div>
+              <div>📊 <b>Маржа:</b> ${p.margin_percent.toFixed(
+                1
+              )}% | <b>ROI:</b> ${p.roi_percent.toFixed(1)}%</div>
             </div>
             <div class="btnrow">
               <button class="btn btn-more" data-idx="${idx}">Подробнее</button>
