@@ -2,7 +2,7 @@ from datetime import datetime
 import os
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -84,6 +84,86 @@ async def webapp():
     Отдача WebApp дашборда (index.html).
     """
     return FileResponse("webapp/index.html")
+
+
+@app.get("/api/find-products")
+def find_products(
+    budget: float = Query(..., gt=0),
+    platform: str = Query("wb"),
+) -> List[Dict[str, Any]]:
+    """
+    WebApp: автоподбор товаров.
+
+    Сейчас: демо-выдача 5 товаров с реалистичными данными.
+    Позже можно заменить на реальный подбор через MPStats.
+    """
+    p = (platform or "wb").lower()
+    if p not in ("wb", "ozon", "both"):
+        p = "wb"
+
+    # Демо-карточки (значения маржи/ROI/прибыли уже «плюсовые»)
+    return [
+        {
+            "title": "🎯 Термос 500мл Xiaomi (нерж. сталь)",
+            "category": "Термосы и термокружки",
+            "sale_price": 990,
+            "niche_revenue": 45_000_000,
+            "monopolist": False,
+            "profit_per_month": 45_000,
+            "margin_percent": 28,
+            "roi_percent": 72,
+            "details_url": "/api/health",
+            "china_url": "https://www.alibaba.com/trade/search?SearchText=%E4%BF%9D%E6%B8%A9%E6%9D%AF",
+        },
+        {
+            "title": "🎯 Органайзер для кабелей Baseus (набор клипс)",
+            "category": "Органайзеры",
+            "sale_price": 790,
+            "niche_revenue": 12_000_000,
+            "monopolist": False,
+            "profit_per_month": 52_000,
+            "margin_percent": 35,
+            "roi_percent": 88,
+            "details_url": "/api/health",
+            "china_url": "https://www.alibaba.com/trade/search?SearchText=%E7%94%B5%E7%BA%BF%E6%94%B6%E7%BA%B3%E5%99%A8",
+        },
+        {
+            "title": "🎯 Силиконовая форма для выпечки 6 ячеек",
+            "category": "Товары для кухни",
+            "sale_price": 690,
+            "niche_revenue": 28_000_000,
+            "monopolist": False,
+            "profit_per_month": 48_000,
+            "margin_percent": 31,
+            "roi_percent": 80,
+            "details_url": "/api/health",
+            "china_url": "https://www.alibaba.com/trade/search?SearchText=%E7%A1%85%E8%83%B6%E8%9B%8B%E7%B3%95%E6%A8%A1%E5%85%B7",
+        },
+        {
+            "title": "🎯 Чехол для AirPods (с карабином, TPU)",
+            "category": "Аксессуары для электроники",
+            "sale_price": 590,
+            "niche_revenue": 18_000_000,
+            "monopolist": False,
+            "profit_per_month": 22_000,
+            "margin_percent": 22,
+            "roi_percent": 55,
+            "details_url": "/api/health",
+            "china_url": "https://www.alibaba.com/trade/search?SearchText=AirPods%20case",
+        },
+        {
+            "title": "🎯 Массажный роллер EVA 45 см (фитнес)",
+            "category": "Товары для спорта",
+            "sale_price": 1590,
+            "niche_revenue": 22_000_000,
+            "monopolist": False,
+            "profit_per_month": 49_000,
+            "margin_percent": 29,
+            "roi_percent": 70,
+            "details_url": "/api/health",
+            "china_url": "https://www.alibaba.com/trade/search?SearchText=foam%20roller",
+        },
+    ]
 
 
 @app.post("/api/analyze", response_model=AnalyzeResponse)

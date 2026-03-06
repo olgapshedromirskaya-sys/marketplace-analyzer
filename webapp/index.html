@@ -2,8 +2,7 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <title>Marketplace Analyzer</title>
-    <!-- Подключаем Telegram WebApp SDK, если открыто внутри Telegram -->
+    <title>Marketplace Analyzer — Подбор товара</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
@@ -28,235 +27,60 @@
         margin: 0;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
           sans-serif;
-        background: radial-gradient(circle at top left, #161b22 0, #0d1117 50%);
+        background: var(--bg);
         color: var(--text);
       }
 
       .app {
-        max-width: 1100px;
+        max-width: 960px;
         margin: 0 auto;
         padding: 16px;
       }
 
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
       h1 {
-        font-size: 20px;
-        margin: 0 0 16px;
+        font-size: 18px;
+        margin: 0;
       }
 
       .tabs {
         display: flex;
         gap: 8px;
-        margin-bottom: 16px;
+        margin: 12px 0 16px;
       }
 
       .tab {
         flex: 1;
         text-align: center;
-        padding: 8px 0;
+        padding: 10px 0;
         border-radius: 999px;
         border: 1px solid var(--border);
         cursor: pointer;
-        font-size: 14px;
+        font-size: 13px;
         color: var(--muted);
         background: rgba(22, 27, 34, 0.8);
+        user-select: none;
       }
 
       .tab.active {
         color: #fff;
-        border-color: var(--wb);
+        border-color: transparent;
         background: linear-gradient(90deg, var(--wb), var(--ozon));
-      }
-
-      .tab[data-tab="ozon"].active {
-        border-color: var(--ozon);
-      }
-
-      .tab[data-tab="settings"].active {
-        border-color: var(--border);
-        background: var(--card);
-      }
-
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 12px;
-        margin-bottom: 16px;
       }
 
       .card {
         background: var(--card);
+        border: 1px solid var(--border);
         border-radius: 16px;
-        padding: 12px 14px;
-        border: 1px solid var(--border);
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
-      }
-
-      .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-        font-size: 13px;
-        color: var(--muted);
-      }
-
-      .card-value {
-        font-size: 18px;
-        font-weight: 600;
-      }
-
-      .trend-positive {
-        color: var(--green);
-      }
-
-      .trend-negative {
-        color: var(--red);
-      }
-
-      .trend-stable {
-        color: var(--yellow);
-      }
-
-      .verdict-block {
-        margin: 8px 0 16px;
-        padding: 14px 16px;
-        border-radius: 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-
-      .verdict-green {
-        background: rgba(63, 185, 80, 0.15);
-        border: 1px solid var(--green);
-      }
-
-      .verdict-yellow {
-        background: rgba(210, 153, 34, 0.15);
-        border: 1px solid var(--yellow);
-      }
-
-      .verdict-red {
-        background: rgba(248, 81, 73, 0.15);
-        border: 1px solid var(--red);
-      }
-
-      .verdict-title {
-        font-size: 15px;
-        font-weight: 600;
-      }
-
-      .verdict-sub {
-        font-size: 13px;
-        color: var(--muted);
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
-      }
-
-      th,
-      td {
-        padding: 6px 4px;
-        text-align: left;
-        border-bottom: 1px solid rgba(48, 54, 61, 0.6);
-      }
-
-      th {
-        color: var(--muted);
-        font-weight: 500;
-      }
-
-      .pill {
-        display: inline-flex;
-        align-items: center;
-        padding: 2px 8px;
-        border-radius: 999px;
-        font-size: 11px;
-        background: rgba(99, 110, 123, 0.25);
-        color: var(--muted);
-      }
-
-      .pill-green {
-        background: rgba(63, 185, 80, 0.2);
-        color: var(--green);
-      }
-
-      .pill-yellow {
-        background: rgba(210, 153, 34, 0.2);
-        color: var(--yellow);
-      }
-
-      .pill-red {
-        background: rgba(248, 81, 73, 0.2);
-        color: var(--red);
-      }
-
-      .inputs-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 8px;
-      }
-
-      .input-group {
-        flex: 1 1 140px;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-
-      label {
-        font-size: 11px;
-        color: var(--muted);
-      }
-
-      input,
-      select {
-        background: #0d1117;
-        border-radius: 8px;
-        border: 1px solid var(--border);
-        color: var(--text);
-        padding: 6px 8px;
-        font-size: 13px;
-        outline: none;
-      }
-
-      input:focus,
-      select:focus {
-        border-color: var(--wb);
-      }
-
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 8px 14px;
-        border-radius: 999px;
-        border: none;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 500;
-      }
-
-      .btn-primary {
-        background: linear-gradient(90deg, var(--wb), var(--ozon));
-        color: #fff;
-      }
-
-      .btn-outline {
-        background: transparent;
-        border: 1px solid var(--border);
-        color: var(--muted);
-      }
-
-      .btn-row {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-top: 8px;
+        padding: 14px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
       }
 
       .muted {
@@ -264,457 +88,556 @@
         font-size: 12px;
       }
 
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      label {
+        font-size: 12px;
+        color: var(--muted);
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      input {
+        width: 100%;
+        background: #0b0f14;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text);
+        padding: 10px 12px;
+        outline: none;
+        font-size: 14px;
+      }
+
+      input:focus {
+        border-color: rgba(203, 17, 171, 0.8);
+      }
+
+      .platform-btns {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .pillbtn {
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text);
+        padding: 8px 12px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+
+      .pillbtn.active.wb {
+        border-color: var(--wb);
+        background: rgba(203, 17, 171, 0.12);
+      }
+
+      .pillbtn.active.ozon {
+        border-color: var(--ozon);
+        background: rgba(0, 91, 255, 0.12);
+      }
+
+      .pillbtn.active.both {
+        border-color: #8b949e;
+        background: rgba(139, 148, 158, 0.12);
+      }
+
+      .primary {
+        width: 100%;
+        margin-top: 10px;
+        border: none;
+        border-radius: 14px;
+        padding: 12px 14px;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 600;
+        color: #fff;
+        background: linear-gradient(90deg, var(--wb), var(--ozon));
+      }
+
+      .primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .product-title {
+        font-size: 14px;
+        font-weight: 700;
+        margin: 0 0 8px;
+      }
+
+      .kv {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 6px;
+        font-size: 13px;
+      }
+
+      .kv b {
+        font-weight: 600;
+      }
+
+      .btnrow {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .btn {
+        flex: 1;
+        text-align: center;
+        padding: 8px 10px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        color: var(--text);
+        text-decoration: none;
+        font-size: 13px;
+      }
+
       .hidden {
         display: none !important;
+      }
+
+      .section-title {
+        font-size: 13px;
+        color: var(--muted);
+        margin: 0 0 10px;
       }
     </style>
   </head>
   <body>
     <div class="app">
-      <h1>Marketplace Analyzer</h1>
+      <div class="topbar">
+        <h1>Marketplace Analyzer</h1>
+        <div class="muted" id="env-badge"></div>
+      </div>
 
       <div class="tabs">
-        <div class="tab active" data-tab="wb">WB</div>
-        <div class="tab" data-tab="ozon">Ozon</div>
-        <div class="tab" data-tab="settings">Настройки</div>
+        <div class="tab active" data-tab="pick">🎯 Подбор</div>
+        <div class="tab" data-tab="calc">💰 Калькулятор</div>
+        <div class="tab" data-tab="settings">⚙️ Настройки</div>
       </div>
 
-      <!-- Вкладка WB/Ozon: общий контент, меняется только акцент -->
-      <div id="tab-main">
+      <!-- ВКЛАДКА: ПОДБОР -->
+      <div id="tab-pick">
         <div class="card">
-          <div class="card-header">
-            <span>Параметры анализа</span>
-            <span class="pill" id="current-platform-pill">WB</span>
+          <div class="section-title">Найти прибыльный товар</div>
+
+          <div style="margin-bottom: 10px">
+            <label>Ваш бюджет, ₽</label>
+            <input id="pick-budget" type="number" placeholder="Например: 100000" />
           </div>
-          <div class="inputs-row">
-            <div class="input-group">
-              <label>Ключевое слово / категория</label>
-              <input id="inp-query" placeholder="Например: органайзер для белья" />
+
+          <div style="margin-bottom: 10px">
+            <label>Платформа</label>
+            <div class="platform-btns">
+              <button class="pillbtn wb active" data-platform="wb">WB</button>
+              <button class="pillbtn ozon" data-platform="ozon">Ozon</button>
+              <button class="pillbtn both" data-platform="both">Обе</button>
             </div>
-            <div class="input-group">
+          </div>
+
+          <button class="primary" id="btn-find">🎯 Найти товар</button>
+          <div class="muted" id="pick-status" style="margin-top: 8px"></div>
+        </div>
+
+        <div id="results" class="grid"></div>
+      </div>
+
+      <!-- ВКЛАДКА: КАЛЬКУЛЯТОР -->
+      <div id="tab-calc" class="hidden">
+        <div class="card">
+          <div class="section-title">Ручной расчёт (упрощённый)</div>
+          <div class="row">
+            <div style="flex: 1 1 220px">
+              <label>Название товара</label>
+              <input id="c-name" placeholder="Термос 500 мл" />
+            </div>
+            <div style="flex: 1 1 160px">
+              <label>Цена закупки, ₽</label>
+              <input id="c-buy" type="number" placeholder="200" />
+            </div>
+            <div style="flex: 1 1 160px">
+              <label>Цена продажи, ₽</label>
+              <input id="c-sell" type="number" placeholder="990" />
+            </div>
+            <div style="flex: 1 1 160px">
               <label>Бюджет, ₽</label>
-              <input id="inp-budget" type="number" value="300000" />
+              <input id="c-budget" type="number" placeholder="100000" />
             </div>
-            <div class="input-group">
-              <label>Период</label>
-              <select id="inp-period">
-                <option value="1">1 мес</option>
-                <option value="3">3 мес</option>
-                <option value="6">6 мес</option>
+          </div>
+
+          <div class="row" style="margin-top: 10px">
+            <div style="flex: 1 1 220px">
+              <label>Платформа</label>
+              <select id="c-platform">
+                <option value="wb">WB</option>
+                <option value="ozon">Ozon</option>
               </select>
             </div>
-            <div class="input-group">
-              <label>Цена продажи, ₽</label>
-              <input id="inp-sale-price" type="number" value="1990" />
+            <div style="flex: 1 1 220px">
+              <label>Налог</label>
+              <select id="c-tax">
+                <option value="0.06">УСН 6%</option>
+                <option value="0.15">УСН 15%</option>
+              </select>
             </div>
-          </div>
-          <div class="btn-row">
-            <button class="btn btn-outline" id="btn-history">История</button>
-            <button class="btn btn-primary" id="btn-analyze">Запустить анализ</button>
-          </div>
-          <div class="muted" id="status-text"></div>
-        </div>
-
-        <div class="grid">
-          <div class="card">
-            <div class="card-header">
-              <span>Выручка</span>
-              <span class="pill" id="trend-pill">–</span>
-            </div>
-            <div class="card-value" id="val-revenue">–</div>
-            <div class="muted" id="val-season">Сезонность: –</div>
           </div>
 
-          <div class="card">
-            <div class="card-header">
-              <span>Продавцов</span>
-            </div>
-            <div class="card-value" id="val-sellers">–</div>
-            <div class="muted" id="val-noname">% no-name: –</div>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <span>% выкупа</span>
-            </div>
-            <div class="card-value" id="val-buyout">–</div>
-            <div class="muted" id="val-top1">Топ-1: –</div>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <span>Финансы</span>
-            </div>
-            <div class="card-value" id="val-profit">–</div>
-            <div class="muted" id="val-roi">ROI / окупаемость: –</div>
-          </div>
-        </div>
-
-        <div class="verdict-block verdict-yellow" id="verdict-block">
-          <div class="verdict-title" id="verdict-title">Вердикт: –</div>
-          <div class="verdict-sub" id="verdict-sub">
-            Запустите анализ, чтобы получить вердикт по нише и товару.
-          </div>
-        </div>
-
-        <div class="card" style="margin-bottom: 16px">
-          <div class="card-header">
-            <span>Топ-5 конкурентов</span>
-          </div>
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Товар</th>
-                  <th>Цена</th>
-                  <th>Продаж/мес</th>
-                  <th>Рейтинг</th>
-                </tr>
-              </thead>
-              <tbody id="tbl-competitors">
-                <tr>
-                  <td colspan="4" class="muted">Пока нет данных.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header">
-            <span>Финансовый расчёт</span>
-          </div>
-          <div class="grid">
-            <div>
-              <div class="muted">Себестоимость, ₽</div>
-              <div class="card-value" id="val-cost">–</div>
-            </div>
-            <div>
-              <div class="muted">Цена безубытка, ₽</div>
-              <div class="card-value" id="val-breakeven">–</div>
-            </div>
-            <div>
-              <div class="muted">Маржа, %</div>
-              <div class="card-value" id="val-margin">–</div>
-            </div>
-            <div>
-              <div class="muted">Единиц на бюджет</div>
-              <div class="card-value" id="val-units">–</div>
-            </div>
+          <button class="primary" id="btn-calc" style="margin-top: 12px">
+            Посчитать
+          </button>
+          <pre
+            id="calc-out"
+            style="
+              margin: 12px 0 0;
+              white-space: pre-wrap;
+              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+                monospace;
+              font-size: 12px;
+              color: var(--text);
+            "
+          ></pre>
+          <div class="muted">
+            Значения по умолчанию: комиссия 15%, логистика WB 150 ₽, хранение 15 ₽,
+            СПП 5%, реклама 15%, фулфилмент 50 ₽, логистика Китай 56 ₽,
+            прочие 15000 ₽/шт.
           </div>
         </div>
       </div>
 
-      <!-- Вкладка настроек -->
+      <!-- ВКЛАДКА: НАСТРОЙКИ -->
       <div id="tab-settings" class="hidden">
         <div class="card">
-          <div class="card-header">
-            <span>MPStats токен</span>
-          </div>
-          <div class="input-group">
-            <label>Ваш MPStats API токен</label>
-            <input id="inp-token" type="password" placeholder="Вставьте токен сюда" />
-          </div>
-          <div class="btn-row">
-            <button class="btn btn-primary" id="btn-save-token">
-              Сохранить токен
-            </button>
-          </div>
-          <div class="muted" id="token-status">
-            Токен хранится только на сервере, по user_id.
-          </div>
-        </div>
+          <div class="section-title">Настройки</div>
 
-        <div class="card">
-          <div class="card-header">
-            <span>Информация</span>
+          <div style="margin-bottom: 10px">
+            <label>MPStats токен</label>
+            <input id="s-token" type="password" placeholder="Вставьте токен" />
+            <div class="muted" id="s-token-status" style="margin-top: 6px"></div>
           </div>
-          <div class="muted">
-            Данные по нишам берутся из MPStats (или из демо-режима, если токен
-            не задан или сервис временно недоступен). Юнит-экономика
-            рассчитывается на основе введённых параметров и общих допущений по
-            логистике и расходам.
+
+          <div class="row">
+            <div style="flex: 1 1 180px">
+              <label>Минимальная маржа, %</label>
+              <input id="s-min-margin" type="number" placeholder="20" />
+            </div>
+            <div style="flex: 1 1 180px">
+              <label>Минимальный ROI, %</label>
+              <input id="s-min-roi" type="number" placeholder="50" />
+            </div>
           </div>
+
+          <button class="primary" id="btn-save-settings" style="margin-top: 12px">
+            Сохранить
+          </button>
+          <div class="muted" id="s-status" style="margin-top: 8px"></div>
         </div>
       </div>
     </div>
 
     <script>
-      // Определяем user_id из Telegram WebApp или даём 0 (демо)
       const tg = window.Telegram ? window.Telegram.WebApp : null;
-      const USER_ID = tg && tg.initDataUnsafe && tg.initDataUnsafe.user
-        ? tg.initDataUnsafe.user.id
-        : 0;
+      const USER_ID =
+        tg && tg.initDataUnsafe && tg.initDataUnsafe.user
+          ? tg.initDataUnsafe.user.id
+          : 0;
 
-      const apiBase = "/api";
+      if (tg) tg.expand();
 
+      // UI: tabs
       const tabs = document.querySelectorAll(".tab");
-      const tabMain = document.getElementById("tab-main");
+      const tabPick = document.getElementById("tab-pick");
+      const tabCalc = document.getElementById("tab-calc");
       const tabSettings = document.getElementById("tab-settings");
-      const platformPill = document.getElementById("current-platform-pill");
 
-      let currentPlatform = "wb";
+      function showTab(name) {
+        tabs.forEach((t) => t.classList.remove("active"));
+        document.querySelector(`.tab[data-tab=\"${name}\"]`).classList.add("active");
+        tabPick.classList.toggle("hidden", name !== "pick");
+        tabCalc.classList.toggle("hidden", name !== "calc");
+        tabSettings.classList.toggle("hidden", name !== "settings");
+      }
 
-      tabs.forEach((tab) => {
-        tab.addEventListener("click", () => {
-          tabs.forEach((t) => t.classList.remove("active"));
-          tab.classList.add("active");
-          const tname = tab.dataset.tab;
-          if (tname === "settings") {
-            tabMain.classList.add("hidden");
-            tabSettings.classList.remove("hidden");
-          } else {
-            tabMain.classList.remove("hidden");
-            tabSettings.classList.add("hidden");
-            currentPlatform = tname;
-            platformPill.textContent = tname.toUpperCase();
-            platformPill.style.background =
-              tname === "wb" ? "rgba(203,17,171,0.2)" : "rgba(0,91,255,0.2)";
-            platformPill.style.color =
-              tname === "wb" ? "#CB11AB" : "#005BFF";
+      tabs.forEach((t) =>
+        t.addEventListener("click", () => showTab(t.dataset.tab))
+      );
+
+      // Badge
+      document.getElementById("env-badge").textContent = USER_ID
+        ? "Telegram WebApp"
+        : "Демо режим (браузер)";
+
+      // Settings storage
+      const LS_KEY = "mpa_settings_v1";
+      function loadSettings() {
+        try {
+          return JSON.parse(localStorage.getItem(LS_KEY) || "{}");
+        } catch {
+          return {};
+        }
+      }
+      function saveSettings(s) {
+        localStorage.setItem(LS_KEY, JSON.stringify(s));
+      }
+      const settings = loadSettings();
+
+      const sToken = document.getElementById("s-token");
+      const sMinMargin = document.getElementById("s-min-margin");
+      const sMinRoi = document.getElementById("s-min-roi");
+      const sStatus = document.getElementById("s-status");
+      const sTokenStatus = document.getElementById("s-token-status");
+
+      sMinMargin.value = settings.minMargin ?? 20;
+      sMinRoi.value = settings.minRoi ?? 50;
+
+      document.getElementById("btn-save-settings").addEventListener("click", async () => {
+        const minMargin = parseFloat(sMinMargin.value || "20");
+        const minRoi = parseFloat(sMinRoi.value || "50");
+        const token = sToken.value.trim();
+        saveSettings({ minMargin, minRoi });
+        sStatus.textContent = "✅ Настройки сохранены.";
+
+        // Сохраняем токен на сервер (если открыто в Telegram и есть user_id)
+        if (USER_ID && token) {
+          sTokenStatus.textContent = "Сохраняю токен...";
+          try {
+            const resp = await fetch("/api/settings/token", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user_id: USER_ID, token }),
+            });
+            if (!resp.ok) throw new Error("token save failed");
+            sTokenStatus.textContent = "✅ Токен сохранён на сервере.";
+          } catch {
+            sTokenStatus.textContent = "Не удалось сохранить токен на сервере.";
           }
+        } else if (!USER_ID && token) {
+          sTokenStatus.textContent = "Токен введён, но сохранение доступно только из Telegram WebApp.";
+        }
+      });
+
+      // Autopick
+      let currentPlatform = "wb";
+      const platformBtns = document.querySelectorAll(".pillbtn[data-platform]");
+      platformBtns.forEach((b) => {
+        b.addEventListener("click", () => {
+          platformBtns.forEach((x) => x.classList.remove("active"));
+          b.classList.add("active");
+          currentPlatform = b.dataset.platform;
         });
       });
 
-      const queryInput = document.getElementById("inp-query");
-      const budgetInput = document.getElementById("inp-budget");
-      const periodSelect = document.getElementById("inp-period");
-      const saleInput = document.getElementById("inp-sale-price");
-      const statusText = document.getElementById("status-text");
+      const pickBudget = document.getElementById("pick-budget");
+      const pickStatus = document.getElementById("pick-status");
+      const btnFind = document.getElementById("btn-find");
+      const results = document.getElementById("results");
 
-      const btnAnalyze = document.getElementById("btn-analyze");
-      const btnHistory = document.getElementById("btn-history");
-      const tblCompetitors = document.getElementById("tbl-competitors");
-
-      const valRevenue = document.getElementById("val-revenue");
-      const valSeason = document.getElementById("val-season");
-      const valSellers = document.getElementById("val-sellers");
-      const valNoname = document.getElementById("val-noname");
-      const valBuyout = document.getElementById("val-buyout");
-      const valTop1 = document.getElementById("val-top1");
-      const valProfit = document.getElementById("val-profit");
-      const valRoi = document.getElementById("val-roi");
-      const valCost = document.getElementById("val-cost");
-      const valBreakeven = document.getElementById("val-breakeven");
-      const valMargin = document.getElementById("val-margin");
-      const valUnits = document.getElementById("val-units");
-      const trendPill = document.getElementById("trend-pill");
-      const verdictBlock = document.getElementById("verdict-block");
-      const verdictTitle = document.getElementById("verdict-title");
-      const verdictSub = document.getElementById("verdict-sub");
-
-      const inpToken = document.getElementById("inp-token");
-      const btnSaveToken = document.getElementById("btn-save-token");
-      const tokenStatus = document.getElementById("token-status");
-
-      function formatNumber(n) {
-        if (n === null || n === undefined || isNaN(n)) return "–";
-        return n.toLocaleString("ru-RU");
+      function fmtMoney(n) {
+        if (n == null || isNaN(n)) return "—";
+        return Math.round(n).toLocaleString("ru-RU");
       }
 
-      function setStatus(msg) {
-        statusText.textContent = msg || "";
+      function cardHtml(p) {
+        return `
+          <div class="card">
+            <div class="product-title">${p.title}</div>
+            <div class="kv">
+              <div>📦 <b>Категория:</b> ${p.category}</div>
+              <div>💰 <b>Цена продажи:</b> ${fmtMoney(p.sale_price)} ₽</div>
+              <div>📈 <b>Выручка ниши:</b> ${fmtMoney(p.niche_revenue / 1_000_000)}М ₽</div>
+              <div>✅ <b>Монополист:</b> ${p.monopolist ? "ДА" : "НЕТ"}</div>
+              <div>💵 <b>Прибыль/мес:</b> ${fmtMoney(p.profit_per_month)} ₽</div>
+              <div>📊 <b>Маржа:</b> ${p.margin_percent}% | <b>ROI:</b> ${p.roi_percent}%</div>
+            </div>
+            <div class="btnrow">
+              <a class="btn" href="${p.details_url || "#"}" target="_blank">Подробнее</a>
+              <a class="btn" href="${p.china_url || "#"}" target="_blank">1688 🇨🇳</a>
+            </div>
+          </div>
+        `;
       }
 
-      async function callAnalyze() {
-        const query = queryInput.value.trim();
-        const budget = parseFloat(budgetInput.value || "0");
-        const period = parseInt(periodSelect.value, 10);
-        const salePrice = parseFloat(saleInput.value || "0");
+      function applyClientFilters(products) {
+        const s = loadSettings();
+        const minMargin = parseFloat(s.minMargin ?? 20);
+        const minRoi = parseFloat(s.minRoi ?? 50);
+        return products.filter(
+          (p) => (p.margin_percent ?? 0) >= minMargin && (p.roi_percent ?? 0) >= minRoi
+        );
+      }
 
-        if (!query) {
-          setStatus("Введите ключевое слово или категорию.");
+      async function findProducts() {
+        const budget = parseFloat(pickBudget.value || "0");
+        if (!budget || budget <= 0) {
+          pickStatus.textContent = "Введите бюджет (например 100000).";
           return;
         }
 
-        setStatus("Запускаю анализ...");
+        btnFind.disabled = true;
+        pickStatus.textContent = "Ищу товары...";
+        results.innerHTML = "";
 
         try {
-          const resp = await fetch(`${apiBase}/analyze`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              user_id: USER_ID,
-              query,
-              budget,
-              platform: currentPlatform,
-              period_months: period,
-              sale_price: salePrice,
-            }),
-          });
-          if (!resp.ok) {
-            throw new Error("Ошибка API");
-          }
+          const resp = await fetch(
+            `/api/find-products?budget=${encodeURIComponent(budget)}&platform=${encodeURIComponent(
+              currentPlatform
+            )}`
+          );
+          if (!resp.ok) throw new Error("api error");
           const data = await resp.json();
-          renderAnalysis(data);
-          setStatus("Готово.");
-        } catch (e) {
-          console.error(e);
-          setStatus("Ошибка при запросе. Возможно, используется демо-режим.");
-        }
-      }
-
-      function renderAnalysis(data) {
-        const a = data.analysis;
-        const c = data.calculator;
-
-        valRevenue.textContent = a.revenue_per_month
-          ? formatNumber(a.revenue_per_month) + " ₽/мес"
-          : "–";
-        valSeason.textContent =
-          "Сезонность: " +
-          (a.seasonality_top_months && a.seasonality_top_months.length
-            ? a.seasonality_top_months.join(", ")
-            : "–");
-        valSellers.textContent = formatNumber(a.sellers_count);
-        valNoname.textContent =
-          "% no-name: " +
-          (a.noname_share != null
-            ? (a.noname_share * 100).toFixed(1) + "%"
-            : "–");
-        valBuyout.textContent =
-          a.buyout_rate != null
-            ? (a.buyout_rate * 100).toFixed(1) + "%"
-            : "–";
-        valTop1.textContent =
-          "Топ-1: " +
-          (a.top1_share != null
-            ? (a.top1_share * 100).toFixed(1) + "%"
-            : "–");
-
-        valProfit.textContent =
-          c.profit_per_month != null
-            ? formatNumber(Math.round(c.profit_per_month)) + " ₽/мес"
-            : "–";
-        valRoi.textContent =
-          c.roi_percent != null && c.payback_months != null
-            ? `${c.roi_percent.toFixed(1)}% / ${c.payback_months.toFixed(
-                1
-              )} мес`
-            : "–";
-
-        valCost.textContent =
-          c.full_cost_per_unit != null
-            ? c.full_cost_per_unit.toFixed(2) + " ₽"
-            : "–";
-        valBreakeven.textContent =
-          c.break_even_price != null
-            ? c.break_even_price.toFixed(2) + " ₽"
-            : "–";
-        valMargin.textContent =
-          c.margin_percent != null
-            ? c.margin_percent.toFixed(1) + " %"
-            : "–";
-        valUnits.textContent =
-          c.units_by_budget != null ? c.units_by_budget : "–";
-
-        const trend = a.trend || "stable";
-        if (trend === "growth") {
-          trendPill.textContent = "РОСТ ▲";
-          trendPill.className = "pill pill-green";
-        } else if (trend === "fall") {
-          trendPill.textContent = "ПАДЕНИЕ ▼";
-          trendPill.className = "pill pill-red";
-        } else {
-          trendPill.textContent = "СТАБИЛЬНО →";
-          trendPill.className = "pill pill-yellow";
-        }
-
-        const vLabel = data.verdict_label || "yellow";
-        verdictBlock.className =
-          "verdict-block " +
-          (vLabel === "green"
-            ? "verdict-green"
-            : vLabel === "red"
-            ? "verdict-red"
-            : "verdict-yellow");
-
-        verdictTitle.textContent = "Вердикт: " + (data.verdict || "–");
-        verdictSub.textContent =
-          "Вердикт учитывает маржинальность, ROI и тренд ниши.";
-
-        const comps = a.top_competitors || [];
-        tblCompetitors.innerHTML = "";
-        if (!comps.length) {
-          const tr = document.createElement("tr");
-          const td = document.createElement("td");
-          td.colSpan = 4;
-          td.className = "muted";
-          td.textContent = "Нет данных по конкурентам.";
-          tr.appendChild(td);
-          tblCompetitors.appendChild(tr);
-        } else {
-          comps.forEach((c) => {
-            const tr = document.createElement("tr");
-            const td1 = document.createElement("td");
-            const td2 = document.createElement("td");
-            const td3 = document.createElement("td");
-            const td4 = document.createElement("td");
-            td1.textContent = c.name || "–";
-            td2.textContent = c.price != null ? c.price + " ₽" : "–";
-            td3.textContent =
-              c.sales_per_month != null ? c.sales_per_month : "–";
-            td4.textContent = c.rating != null ? c.rating : "–";
-            tr.appendChild(td1);
-            tr.appendChild(td2);
-            tr.appendChild(td3);
-            tr.appendChild(td4);
-            tblCompetitors.appendChild(tr);
-          });
-        }
-      }
-
-      async function saveToken() {
-        const token = inpToken.value.trim();
-        if (!token) {
-          tokenStatus.textContent = "Введите токен.";
-          return;
-        }
-        tokenStatus.textContent = "Сохраняю токен...";
-        try {
-          const resp = await fetch(`${apiBase}/settings/token`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: USER_ID, token }),
-          });
-          if (!resp.ok) {
-            throw new Error("Ошибка");
-          }
-          tokenStatus.textContent = "✅ Токен сохранён.";
-        } catch (e) {
-          tokenStatus.textContent =
-            "Ошибка при сохранении токена. Проверьте подключение.";
-        }
-      }
-
-      async function loadHistory() {
-        setStatus("Загружаю историю...");
-        try {
-          const resp = await fetch(`${apiBase}/history/${USER_ID}`);
-          if (!resp.ok) throw new Error("Ошибка history");
-          const items = await resp.json();
-          if (!items.length) {
-            setStatus("История пуста.");
+          const filtered = applyClientFilters(data);
+          if (!filtered.length) {
+            pickStatus.textContent =
+              "😔 По вашим фильтрам не найдено подходящих товаров. Попробуйте снизить пороги в настройках.";
             return;
           }
-          const last = items[0];
-          setStatus(
-            `Последний анализ: "${last.query}", платформа ${
-              last.platform
-            }, бюджет ${last.budget}, дата ${last.created_at}`
-          );
+          results.innerHTML = filtered.slice(0, 5).map(cardHtml).join("");
+          pickStatus.textContent = `Найдено товаров: ${Math.min(filtered.length, 5)}.`;
         } catch (e) {
-          setStatus("Не удалось загрузить историю.");
+          // Демо режим: если API недоступно
+          const demo = applyClientFilters([
+            {
+              title: "🎯 Термос 500мл Xiaomi (нерж. сталь)",
+              category: "Термосы и термокружки",
+              sale_price: 990,
+              niche_revenue: 45000000,
+              monopolist: false,
+              profit_per_month: 45000,
+              margin_percent: 28,
+              roi_percent: 72,
+              details_url: "#",
+              china_url:
+                "https://www.alibaba.com/trade/search?SearchText=%E4%BF%9D%E6%B8%A9%E6%9D%AF",
+            },
+            {
+              title: "🎯 Органайзер для кабелей Baseus (набор клипс)",
+              category: "Органайзеры",
+              sale_price: 790,
+              niche_revenue: 12000000,
+              monopolist: false,
+              profit_per_month: 52000,
+              margin_percent: 35,
+              roi_percent: 88,
+              details_url: "#",
+              china_url:
+                "https://www.alibaba.com/trade/search?SearchText=%E7%94%B5%E7%BA%BF%E6%94%B6%E7%BA%B3%E5%99%A8",
+            },
+            {
+              title: "🎯 Силиконовая форма для выпечки 6 ячеек",
+              category: "Товары для кухни",
+              sale_price: 690,
+              niche_revenue: 28000000,
+              monopolist: false,
+              profit_per_month: 48000,
+              margin_percent: 31,
+              roi_percent: 80,
+              details_url: "#",
+              china_url:
+                "https://www.alibaba.com/trade/search?SearchText=%E7%A1%85%E8%83%B6%E8%9B%8B%E7%B3%95%E6%A8%A1%E5%85%B7",
+            },
+            {
+              title: "🎯 Чехол для AirPods (с карабином, TPU)",
+              category: "Аксессуары для электроники",
+              sale_price: 590,
+              niche_revenue: 18000000,
+              monopolist: false,
+              profit_per_month: 22000,
+              margin_percent: 22,
+              roi_percent: 55,
+              details_url: "#",
+              china_url:
+                "https://www.alibaba.com/trade/search?SearchText=AirPods%20case",
+            },
+            {
+              title: "🎯 Массажный роллер EVA 45 см (фитнес)",
+              category: "Товары для спорта",
+              sale_price: 1590,
+              niche_revenue: 22000000,
+              monopolist: false,
+              profit_per_month: 49000,
+              margin_percent: 29,
+              roi_percent: 70,
+              details_url: "#",
+              china_url:
+                "https://www.alibaba.com/trade/search?SearchText=foam%20roller",
+            },
+          ]);
+          results.innerHTML = demo.slice(0, 5).map(cardHtml).join("");
+          pickStatus.textContent = "Показаны демо-результаты (API недоступно).";
+        } finally {
+          btnFind.disabled = false;
         }
       }
 
-      btnAnalyze.addEventListener("click", callAnalyze);
-      btnSaveToken.addEventListener("click", saveToken);
-      btnHistory.addEventListener("click", loadHistory);
+      btnFind.addEventListener("click", findProducts);
 
-      if (tg) {
-        tg.expand();
-      }
+      // Calculator (client-side, same constants/formula as Telegram simplified)
+      document.getElementById("btn-calc").addEventListener("click", () => {
+        const name = document.getElementById("c-name").value.trim() || "Товар";
+        const buy = parseFloat(document.getElementById("c-buy").value || "0");
+        const sell = parseFloat(document.getElementById("c-sell").value || "0");
+        const budget = parseFloat(document.getElementById("c-budget").value || "0");
+        const taxRate = parseFloat(document.getElementById("c-tax").value || "0.06");
+
+        const commission = sell * 0.15;
+        const logisticsWb = 150;
+        const storage = 15;
+        const spp = sell * 0.05;
+        const ads = sell * 0.15;
+        const tax = sell * taxRate;
+        const fullCost = buy + 56 + 50;
+        const units = fullCost > 0 ? Math.floor(budget / fullCost) : 0;
+        const otherPerUnit = units > 0 ? 15000 / units : 0;
+        const expenses =
+          commission + logisticsWb + storage + spp + ads + tax + otherPerUnit;
+        const net = sell - fullCost - expenses;
+        const margin = sell > 0 ? (net / sell) * 100 : 0;
+        const roi = fullCost > 0 ? (net / fullCost) * 100 : 0;
+        const payback = net > 0 ? fullCost / net : 0;
+        const profitMonth = net * units;
+
+        const out = [
+          `💰 КАЛЬКУЛЯТОР: ${name}`,
+          `Цена продажи: ${fmtMoney(sell)} ₽`,
+          `Цена закупки: ${fmtMoney(buy)} ₽`,
+          `Единиц на бюджет: ${units} шт`,
+          ``,
+          `ВЫЧИТАЕМ:`,
+          `- Комиссия WB (15%): — ${fmtMoney(commission)} ₽`,
+          `- Логистика WB: — ${fmtMoney(logisticsWb)} ₽`,
+          `- Хранение: — ${fmtMoney(storage)} ₽`,
+          `- СПП (5%): — ${fmtMoney(spp)} ₽`,
+          `- Реклама (15%): — ${fmtMoney(ads)} ₽`,
+          `- Налог УСН ${Math.round(taxRate * 100)}%: — ${fmtMoney(tax)} ₽`,
+          `- Фулфилмент: — ${fmtMoney(50)} ₽`,
+          `- Прочие (/шт): — ${fmtMoney(otherPerUnit)} ₽`,
+          ``,
+          `Себестоимость (полная): ${fmtMoney(fullCost)} ₽`,
+          `Итого расходов: ${fmtMoney(expenses)} ₽`,
+          `ЧИСТАЯ ПРИБЫЛЬ: ${fmtMoney(net)} ₽/шт`,
+          ``,
+          `📊 Маржинальность: ${margin.toFixed(1)}%`,
+          `📈 ROI: ${roi.toFixed(1)}%`,
+          `⏱ Окупаемость: ${payback.toFixed(1)} мес`,
+          `💵 Прибыль в месяц: ~${fmtMoney(profitMonth)} ₽`,
+        ].join("\n");
+
+        document.getElementById("calc-out").textContent = out;
+      });
     </script>
   </body>
 </html>
