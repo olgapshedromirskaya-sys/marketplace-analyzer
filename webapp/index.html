@@ -216,6 +216,84 @@
         color: var(--muted);
         margin: 0 0 10px;
       }
+
+      /* Модальное окно для подробной информации */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+      }
+
+      .modal {
+        max-width: 540px;
+        width: calc(100% - 32px);
+        max-height: 80vh;
+        overflow-y: auto;
+        background: var(--card);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        padding: 16px 16px 14px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .modal-title {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 0;
+      }
+
+      .modal-close {
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        font-size: 18px;
+        cursor: pointer;
+      }
+
+      .modal-section {
+        margin-top: 10px;
+        font-size: 13px;
+      }
+
+      .modal-section h3 {
+        font-size: 13px;
+        margin: 0 0 4px;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+
+      .verdict-tag {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+      }
+
+      .verdict-green {
+        background: rgba(63, 185, 80, 0.16);
+        color: var(--green);
+      }
+
+      .verdict-yellow {
+        background: rgba(210, 153, 34, 0.16);
+        color: var(--yellow);
+      }
+
+      .verdict-red {
+        background: rgba(248, 81, 73, 0.16);
+        color: var(--red);
+      }
     </style>
   </head>
   <body>
@@ -445,13 +523,14 @@
       const pickStatus = document.getElementById("pick-status");
       const btnFind = document.getElementById("btn-find");
       const results = document.getElementById("results");
+      let currentProducts = [];
 
       function fmtMoney(n) {
         if (n == null || isNaN(n)) return "—";
         return Math.round(n).toLocaleString("ru-RU");
       }
 
-      function cardHtml(p) {
+      function cardHtml(p, idx) {
         return `
           <div class="card">
             <div class="product-title">${p.title}</div>
@@ -464,7 +543,7 @@
               <div>📊 <b>Маржа:</b> ${p.margin_percent}% | <b>ROI:</b> ${p.roi_percent}%</div>
             </div>
             <div class="btnrow">
-              <a class="btn" href="${p.details_url || "#"}" target="_blank">Подробнее</a>
+              <button class="btn btn-more" data-idx="${idx}">Подробнее</button>
               <a class="btn" href="${p.china_url || "#"}" target="_blank">1688 🇨🇳</a>
             </div>
           </div>
@@ -505,7 +584,11 @@
               "😔 По вашим фильтрам не найдено подходящих товаров. Попробуйте снизить пороги в настройках.";
             return;
           }
-          results.innerHTML = filtered.slice(0, 5).map(cardHtml).join("");
+          currentProducts = filtered.slice(0, 5);
+          results.innerHTML = currentProducts
+            .map((p, idx) => cardHtml(p, idx))
+            .join("");
+          attachCardHandlers();
           pickStatus.textContent = `Найдено товаров: ${Math.min(filtered.length, 5)}.`;
         } catch (e) {
           // Демо режим: если API недоступно
@@ -576,7 +659,11 @@
                 "https://www.alibaba.com/trade/search?SearchText=foam%20roller",
             },
           ]);
-          results.innerHTML = demo.slice(0, 5).map(cardHtml).join("");
+          currentProducts = demo.slice(0, 5);
+          results.innerHTML = currentProducts
+            .map((p, idx) => cardHtml(p, idx))
+            .join("");
+          attachCardHandlers();
           pickStatus.textContent = "Показаны демо-результаты (API недоступно).";
         } finally {
           btnFind.disabled = false;
@@ -638,6 +725,306 @@
 
         document.getElementById("calc-out").textContent = out;
       });
+
+      // ===== МОДАЛЬНОЕ ОКНО "ПОДРОБНЕЕ" =====
+
+      const modalOverlay = document.createElement("div");
+      modalOverlay.id = "modal-overlay";
+      modalOverlay.className = "modal-overlay hidden";
+      modalOverlay.innerHTML = `
+        <div class="modal">
+          <div class="modal-header">
+            <h2 class="modal-title"></h2>
+            <button class="modal-close" type="button">×</button>
+          </div>
+          <div id="modal-body"></div>
+        </div>
+      `;
+      document.body.appendChild(modalOverlay);
+
+      const modalTitle = modalOverlay.querySelector(".modal-title");
+      const modalBody = modalOverlay.querySelector("#modal-body");
+      const modalClose = modalOverlay.querySelector(".modal-close");
+
+      function closeModal() {
+        modalOverlay.classList.add("hidden");
+        modalBody.innerHTML = "";
+      }
+
+      modalClose.addEventListener("click", closeModal);
+      modalOverlay.addEventListener("click", (e) => {
+        if (e.target === modalOverlay) closeModal();
+      });
+
+      const DEMO_DETAILS = {
+        "🎯 Термос 500мл Xiaomi (нерж. сталь)": {
+          niche: {
+            revenue: 45_000_000,
+            sellers: 120,
+            buyout_rate: 0.6,
+            trend: "growth",
+            seasonality: ["март", "апрель", "ноябрь"],
+          },
+          competitors: [
+            {
+              name: "Термос Арктика 106-500 стальной 500 мл",
+              price: 1890,
+              sales_per_month: 1200,
+              rating: 4.8,
+              buyout_rate: 0.65,
+            },
+            {
+              name: "Термокружка LaPlaya Office 500 мл нержавеющая сталь",
+              price: 1590,
+              sales_per_month: 950,
+              rating: 4.6,
+              buyout_rate: 0.58,
+            },
+            {
+              name: "Термос Biostal NBP-500 туристический 500 мл",
+              price: 1390,
+              sales_per_month: 780,
+              rating: 4.7,
+              buyout_rate: 0.61,
+            },
+          ],
+          verdict: "🟢 БРАТЬ",
+          verdict_color: "green",
+        },
+        "🎯 Органайзер для кабелей Baseus (набор клипс)": {
+          niche: {
+            revenue: 12_000_000,
+            sellers: 80,
+            buyout_rate: 0.55,
+            trend: "growth",
+            seasonality: ["январь", "февраль", "сентябрь"],
+          },
+          competitors: [
+            {
+              name: "Органайзер для проводов Baseus Cube настольный",
+              price: 690,
+              sales_per_month: 1100,
+              rating: 4.7,
+              buyout_rate: 0.6,
+            },
+            {
+              name: "Органайзер сумка для кабелей UGREEN двойной чехол",
+              price: 1290,
+              sales_per_month: 830,
+              rating: 4.8,
+              buyout_rate: 0.57,
+            },
+            {
+              name: "Органайзер для кабелей Xiaomi Youpin настенный набор",
+              price: 490,
+              sales_per_month: 1500,
+              rating: 4.6,
+              buyout_rate: 0.52,
+            },
+          ],
+          verdict: "🟢 БРАТЬ",
+          verdict_color: "green",
+        },
+        "🎯 Силиконовая форма для выпечки 6 ячеек": {
+          niche: {
+            revenue: 28_000_000,
+            sellers: 95,
+            buyout_rate: 0.48,
+            trend: "growth",
+            seasonality: ["декабрь", "январь", "март"],
+          },
+          competitors: [
+            {
+              name: "Форма силиконовая Доляна для кексов 6 ячеек",
+              price: 490,
+              sales_per_month: 1400,
+              rating: 4.8,
+              buyout_rate: 0.53,
+            },
+            {
+              name: "Форма для кексов TimA силиконовая 12 ячеек",
+              price: 690,
+              sales_per_month: 980,
+              rating: 4.7,
+              buyout_rate: 0.5,
+            },
+            {
+              name: "Набор форм для выпечки Marmiton сердечки 6 шт",
+              price: 790,
+              sales_per_month: 760,
+              rating: 4.6,
+              buyout_rate: 0.47,
+            },
+          ],
+          verdict: "🟢 БРАТЬ",
+          verdict_color: "green",
+        },
+        "🎯 Чехол для AirPods (с карабином, TPU)": {
+          niche: {
+            revenue: 18_000_000,
+            sellers: 150,
+            buyout_rate: 0.5,
+            trend: "stable",
+            seasonality: ["сентябрь", "октябрь", "ноябрь"],
+          },
+          competitors: [
+            {
+              name: "Чехол силиконовый для AirPods 2/1 с карабином",
+              price: 390,
+              sales_per_month: 2100,
+              rating: 4.6,
+              buyout_rate: 0.55,
+            },
+            {
+              name: "Чехол ESR Hybrid для AirPods Pro TPU + пластик",
+              price: 890,
+              sales_per_month: 980,
+              rating: 4.7,
+              buyout_rate: 0.5,
+            },
+            {
+              name: "Чехол для AirPods 3 Spigen Rugged Armor",
+              price: 1290,
+              sales_per_month: 650,
+              rating: 4.8,
+              buyout_rate: 0.52,
+            },
+          ],
+          verdict: "🟡 РИСК",
+          verdict_color: "yellow",
+        },
+        "🎯 Массажный роллер EVA 45 см (фитнес)": {
+          niche: {
+            revenue: 22_000_000,
+            sellers: 60,
+            buyout_rate: 0.58,
+            trend: "growth",
+            seasonality: ["февраль", "март", "апрель"],
+          },
+          competitors: [
+            {
+              name: "Массажный роллер Lite Weights EVA 45 см",
+              price: 1590,
+              sales_per_month: 870,
+              rating: 4.7,
+              buyout_rate: 0.6,
+            },
+            {
+              name: "Роллер для пилатеса Starfit FA-502 60 см",
+              price: 1890,
+              sales_per_month: 720,
+              rating: 4.8,
+              buyout_rate: 0.55,
+            },
+            {
+              name: "Массажный валик Bradex «Рельеф» 33 см",
+              price: 1390,
+              sales_per_month: 960,
+              rating: 4.6,
+              buyout_rate: 0.57,
+            },
+          ],
+          verdict: "🟢 БРАТЬ",
+          verdict_color: "green",
+        },
+      };
+
+      function verdictClass(color) {
+        if (color === "green") return "verdict-green";
+        if (color === "red") return "verdict-red";
+        return "verdict-yellow";
+      }
+
+      function attachCardHandlers() {
+        const moreBtns = results.querySelectorAll(".btn-more");
+        moreBtns.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const idx = parseInt(btn.dataset.idx || "0", 10);
+            const p = currentProducts[idx];
+            if (p) showModal(p);
+          });
+        });
+      }
+
+      function showModal(p) {
+        const extra = DEMO_DETAILS[p.title] || {};
+        const niche = extra.niche || {};
+        const comps = extra.competitors || [];
+        const verdict = extra.verdict || "";
+        const vColor = extra.verdict_color || "yellow";
+
+        modalTitle.textContent = p.title;
+
+        const season =
+          (niche.seasonality && niche.seasonality.join(", ")) || "—";
+        const trendSymbol =
+          niche.trend === "growth"
+            ? "▲ РОСТ"
+            : niche.trend === "fall"
+            ? "▼ ПАДЕНИЕ"
+            : "→ СТАБИЛЬНО";
+
+        const compsHtml =
+          comps.length === 0
+            ? "<div class=\"muted\">Нет данных по конкурентам.</div>"
+            : comps
+                .slice(0, 3)
+                .map(
+                  (c, i) => `
+            <div>
+              <b>${i + 1}. ${c.name}</b><br/>
+              💰 Цена: ${fmtMoney(c.price)} ₽<br/>
+              📦 Продаж: ${fmtMoney(c.sales_per_month)} шт/мес<br/>
+              💵 Выручка: ${fmtMoney(
+                (c.price || 0) * (c.sales_per_month || 0)
+              )} ₽/мес<br/>
+              ⭐ Рейтинг: ${(c.rating ?? 0).toFixed(1)}<br/>
+              🔄 Выкуп: ${Math.round((c.buyout_rate ?? niche.buyout_rate ?? 0) * 100)}%
+            </div>
+          `
+                )
+                .join("<hr style=\"border:none;border-top:1px solid #30363d;margin:6px 0;\"/>");
+
+        const vHtml = verdict
+          ? `<span class="verdict-tag ${verdictClass(
+              vColor
+            )}">${verdict}</span>`
+          : "";
+
+        modalBody.innerHTML = `
+          <div class="modal-section">
+            <h3>Данные ниши</h3>
+            <div>💵 Выручка ниши: ${fmtMoney(
+              niche.revenue ?? p.niche_revenue
+            )} ₽/мес</div>
+            <div>👨‍💼 Продавцов: ${fmtMoney(niche.sellers ?? 0)}</div>
+            <div>🔄 % выкупа: ${Math.round(
+              (niche.buyout_rate ?? 0) * 100
+            )}%</div>
+            <div>📈 Тренд: ${trendSymbol}</div>
+            <div>📆 Сезонность: ${season}</div>
+          </div>
+          <div class="modal-section">
+            <h3>Топ-3 конкурента</h3>
+            ${compsHtml}
+          </div>
+          <div class="modal-section">
+            <h3>Закупка на 1688</h3>
+            <div>
+              <a href="${p.china_url ||
+                "#"}" target="_blank" style="color: var(--green); text-decoration: none;">
+                Открыть поиск поставщиков 🇨🇳
+              </a>
+            </div>
+          </div>
+          <div class="modal-section">
+            <h3>Вердикт</h3>
+            <div>${vHtml || "<span class='muted'>Нет данных по вердикту.</span>"}</div>
+          </div>
+        `;
+
+        modalOverlay.classList.remove("hidden");
+      }
     </script>
   </body>
 </html>
