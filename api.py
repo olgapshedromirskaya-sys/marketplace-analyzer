@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
@@ -62,6 +63,11 @@ def on_startup() -> None:
     Используем синхронную версию, чтобы не блокировать event loop.
     """
     init_db_sync()
+
+
+@app.get("/")
+async def root():
+    return {"status": "Bot is running"}
 
 
 @app.get("/api/health")
