@@ -124,13 +124,20 @@
       }
 
       .pillbtn {
-        border: 1px solid var(--border);
-        background: transparent;
-        color: var(--text);
+        border: 1px solid #444;
+        background: #2a2a2a;
+        color: #ffffff;
         padding: 8px 12px;
         border-radius: 999px;
         cursor: pointer;
         font-size: 13px;
+      }
+
+      /* Общая подсветка выбранных кнопок (месяц/налог и т.п.) */
+      .pillbtn.active {
+        border-color: transparent;
+        background: linear-gradient(90deg, var(--wb), var(--ozon));
+        color: #fff;
       }
 
       .pillbtn.active.wb {
@@ -357,6 +364,19 @@
             <div class="platform-btns" id="tax-btns">
               <button class="pillbtn active" data-tax="0.06">УСН 6%</button>
               <button class="pillbtn" data-tax="0.15">УСН 15%</button>
+              <button class="pillbtn" data-tax="custom">Своя ставка</button>
+            </div>
+            <div id="custom-tax-wrap" class="hidden" style="margin-top: 8px">
+              <label>Своя ставка, %</label>
+              <input
+                id="custom-tax-input"
+                type="number"
+                inputmode="decimal"
+                placeholder="Например: 1 или 20"
+              />
+              <div class="muted" style="margin-top: 6px">
+                Будет применяться как налог от цены продажи.
+              </div>
             </div>
           </div>
 
@@ -566,12 +586,30 @@
       });
 
       const taxBtns = document.querySelectorAll("#tax-btns .pillbtn[data-tax]");
+      const customTaxWrap = document.getElementById("custom-tax-wrap");
+      const customTaxInput = document.getElementById("custom-tax-input");
       taxBtns.forEach((b) => {
         b.addEventListener("click", () => {
           taxBtns.forEach((x) => x.classList.remove("active"));
           b.classList.add("active");
-          currentTaxRate = parseFloat(b.dataset.tax || "0.06");
+          const v = b.dataset.tax || "0.06";
+          if (v === "custom") {
+            customTaxWrap.classList.remove("hidden");
+            // Если пользователь ещё не ввёл — оставляем текущую ставку, но показываем поле
+            customTaxInput.focus();
+          } else {
+            customTaxWrap.classList.add("hidden");
+            currentTaxRate = parseFloat(v);
+          }
         });
+      });
+
+      // Пользовательская ставка налога
+      customTaxInput.addEventListener("input", () => {
+        const raw = parseFloat(customTaxInput.value || "");
+        if (!isNaN(raw) && raw >= 0 && raw <= 100) {
+          currentTaxRate = raw / 100;
+        }
       });
 
       const pickBudget = document.getElementById("pick-budget");
@@ -1027,30 +1065,36 @@
         const verdict = extra.verdict || "";
         const vColor = extra.verdict_color || "yellow";
 
-        // ===== Юнит-экономика (как в Telegram боте) =====
+        // ===== Юнит-экономика (проверенная формула) =====
         const salePrice = Number(p.sale_price || 0);
         const budget = Number(p._budget || 0);
         const taxRate = Number(p._taxRate || 0.06);
         // Закупку оцениваем как 20% от цены продажи (если не пришло с API)
         const purchaseRub = Number(p.purchase_rub || Math.round(salePrice * 0.2));
 
+        // Константы (как в боте)
         const COMMISSION_RATE = 0.15;
         const LOGISTICS_WB = 150;
         const STORAGE_WB = 15;
         const SPP_RATE = 0.05;
         const ADS_RATE = 0.15;
-        const FULFILLMENT = 50;
         const LOGISTICS_CN = 56;
+        const FULFILLMENT = 50;
         const OTHER_TOTAL = 15000;
 
-        const fullCost = purchaseRub + LOGISTICS_CN + FULFILLMENT;
-        const units = fullCost > 0 ? Math.floor(budget / fullCost) : 0;
+        // Себестоимость = закупка + Китай(56) + фулфилмент(50)
+        const costPerUnit = purchaseRub + LOGISTICS_CN + FULFILLMENT;
+
+        // Кол-во единиц на бюджет
+        const units = costPerUnit > 0 ? Math.floor(budget / costPerUnit) : 0;
         const otherPerUnit = units > 0 ? OTHER_TOTAL / units : OTHER_TOTAL;
+
+        // Расходы на продажу (без себестоимости!)
         const commission = salePrice * COMMISSION_RATE;
         const spp = salePrice * SPP_RATE;
         const ads = salePrice * ADS_RATE;
         const tax = salePrice * taxRate;
-        const totalExpenses =
+        const expensesTotal =
           commission +
           LOGISTICS_WB +
           STORAGE_WB +
@@ -1059,11 +1103,18 @@
           tax +
           otherPerUnit;
 
-        const netProfitPerUnit = salePrice - fullCost - totalExpenses;
-        const marginPercent = salePrice > 0 ? (netProfitPerUnit / salePrice) * 100 : 0;
-        const roiPercent = fullCost > 0 ? (netProfitPerUnit / fullCost) * 100 : 0;
-        const paybackMonths = netProfitPerUnit > 0 ? fullCost / netProfitPerUnit : 0;
+        // Чистая прибыль
+        const netProfitPerUnit = salePrice - costPerUnit - expensesTotal;
+        const marginPercent =
+          salePrice > 0 ? (netProfitPerUnit / salePrice) * 100 : 0;
+        const roiPercent =
+          costPerUnit > 0 ? (netProfitPerUnit / costPerUnit) * 100 : 0;
+
+        // Прибыль/мес и окупаемость
         const profitPerMonth = netProfitPerUnit * units;
+        const batchCost = costPerUnit * units;
+        const paybackMonths =
+          profitPerMonth > 0 ? batchCost / profitPerMonth : 0;
 
         let verdictAuto = "🟡 РИСК";
         let verdictColorAuto = "yellow";
@@ -1156,11 +1207,9 @@
             <div>- СПП (5%): — ${fmtMoney(spp)} ₽</div>
             <div>- Реклама (15%): — ${fmtMoney(ads)} ₽</div>
             <div>- Налог УСН ${Math.round(taxRate * 100)}%: — ${fmtMoney(tax)} ₽</div>
-            <div>- Фулфилмент: — ${fmtMoney(FULFILLMENT)} ₽</div>
-            <div>- Логистика Китай: — ${fmtMoney(LOGISTICS_CN)} ₽</div>
             <div>- Прочие (/шт): — ${fmtMoney(otherPerUnit)} ₽</div>
-            <div style="margin-top: 6px"><b>Себестоимость (полная):</b> ${fmtMoney(fullCost)} ₽</div>
-            <div><b>Итого расходов:</b> ${fmtMoney(totalExpenses)} ₽</div>
+            <div style="margin-top: 6px"><b>Себестоимость:</b> ${fmtMoney(costPerUnit)} ₽/шт</div>
+            <div><b>Итого расходов:</b> ${fmtMoney(expensesTotal)} ₽</div>
             <div><b>Чистая прибыль:</b> ${fmtMoney(netProfitPerUnit)} ₽/шт</div>
             <div style="margin-top: 6px">
               📊 Маржа: ${marginPercent.toFixed(1)}% |
