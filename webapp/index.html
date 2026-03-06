@@ -623,6 +623,104 @@
         return Math.round(n).toLocaleString("ru-RU");
       }
 
+      // Расчёт юнит-экономики для карточки (та же логика, что в модалке)
+      function computeUnitEconomics(p) {
+        const salePrice = Number(p.sale_price || 0);
+        const budget = Number(p._budget || 0);
+        const taxRate = Number(p._taxRate || 0.06);
+        const purchaseRub = Number(
+          p.purchase_rub || Math.round(salePrice * 0.2)
+        );
+
+        const COMMISSION_RATE = 0.15;
+        const LOGISTICS_WB = 150;
+        const STORAGE_WB = 15;
+        const SPP_RATE = 0.05;
+        const ADS_RATE = 0.15;
+        const LOGISTICS_CN = 56;
+        const FULFILLMENT = 50;
+        const OTHER_TOTAL = 15000;
+
+        const costPerUnit = purchaseRub + LOGISTICS_CN + FULFILLMENT;
+        const units = costPerUnit > 0 ? Math.floor(budget / costPerUnit) : 0;
+        const otherPerUnit = units > 0 ? OTHER_TOTAL / units : OTHER_TOTAL;
+
+        const commission = salePrice * COMMISSION_RATE;
+        const spp = salePrice * SPP_RATE;
+        const ads = salePrice * ADS_RATE;
+        const tax = salePrice * taxRate;
+        const expensesTotal =
+          commission +
+          LOGISTICS_WB +
+          STORAGE_WB +
+          spp +
+          ads +
+          tax +
+          otherPerUnit;
+
+        const netProfitPerUnit = salePrice - costPerUnit - expensesTotal;
+        const marginPercent =
+          salePrice > 0 ? (netProfitPerUnit / salePrice) * 100 : 0;
+        const roiPercent =
+          costPerUnit > 0 ? (netProfitPerUnit / costPerUnit) * 100 : 0;
+
+        const profitPerMonth = netProfitPerUnit * units;
+        const batchCost = costPerUnit * units;
+        const paybackMonths =
+          profitPerMonth > 0 ? batchCost / profitPerMonth : 0;
+
+        // Вердикт по жёстким правилам
+        let verdictType = "yellow";
+        // БРАТЬ (зелёный)
+        if (
+          netProfitPerUnit > 0 &&
+          marginPercent >= 20 &&
+          roiPercent >= 50 &&
+          paybackMonths <= 1
+        ) {
+          verdictType = "green";
+        }
+        // НЕ БРАТЬ (красный)
+        else if (
+          marginPercent < 10 ||
+          netProfitPerUnit <= 0 ||
+          paybackMonths > 2
+        ) {
+          verdictType = "red";
+        } else if (
+          (marginPercent >= 10 && marginPercent < 20) ||
+          (paybackMonths > 1 && paybackMonths <= 2)
+        ) {
+          verdictType = "yellow";
+        }
+
+        let verdictText = "🟡 РИСК";
+        if (verdictType === "green") verdictText = "🟢 БРАТЬ";
+        if (verdictType === "red") verdictText = "🔴 НЕ БРАТЬ";
+
+        return {
+          salePrice,
+          budget,
+          taxRate,
+          purchaseRub,
+          costPerUnit,
+          units,
+          otherPerUnit,
+          commission,
+          spp,
+          ads,
+          tax,
+          expensesTotal,
+          netProfitPerUnit,
+          marginPercent,
+          roiPercent,
+          profitPerMonth,
+          paybackMonths,
+          verdictType,
+          verdictText,
+        };
+      }
+
       function cardHtml(p, idx) {
         return `
           <div class="card">
@@ -647,9 +745,24 @@
         const s = loadSettings();
         const minMargin = parseFloat(s.minMargin ?? 20);
         const minRoi = parseFloat(s.minRoi ?? 50);
-        return products.filter(
-          (p) => (p.margin_percent ?? 0) >= minMargin && (p.roi_percent ?? 0) >= minRoi
-        );
+        return products.filter((p) => {
+          const calc = computeUnitEconomics(p);
+          p._calc = calc;
+          // Сохраняем пересчитанные значения
+          p.margin_percent = calc.marginPercent;
+          p.roi_percent = calc.roiPercent;
+          p.profit_per_month = calc.profitPerMonth;
+
+          // Должны пройти пользовательский фильтр
+          if (calc.marginPercent < minMargin || calc.roiPercent < minRoi) {
+            return false;
+          }
+          // И не попадать в "НЕ БРАТЬ"
+          if (calc.verdictType === "red") {
+            return false;
+          }
+          return true;
+        });
       }
 
       async function findProducts() {
@@ -679,8 +792,13 @@
           }));
           const filtered = applyClientFilters(enriched);
           if (!filtered.length) {
-            pickStatus.textContent =
-              "😔 По вашим фильтрам не найдено подходящих товаров. Попробуйте снизить пороги в настройках.";
+            if (currentTaxRate >= 0.149 && currentTaxRate <= 0.151) {
+              pickStatus.textContent =
+                "😔 При УСН 15% не найдено прибыльных товаров с данным бюджетом.";
+            } else {
+              pickStatus.textContent =
+                "😔 По вашим фильтрам не найдено подходящих товаров. Попробуйте снизить пороги или изменить налог.";
+            }
             return;
           }
           currentProducts = filtered.slice(0, 5);
@@ -766,12 +884,22 @@
               _taxRate: currentTaxRate,
             }))
           );
-          currentProducts = demo.slice(0, 5);
-          results.innerHTML = currentProducts
-            .map((p, idx) => cardHtml(p, idx))
-            .join("");
-          attachCardHandlers();
-          pickStatus.textContent = "Показаны демо-результаты (API недоступно).";
+          if (!demo.length) {
+            if (currentTaxRate >= 0.149 && currentTaxRate <= 0.151) {
+              pickStatus.textContent =
+                "😔 При УСН 15% не найдено прибыльных товаров с данным бюджетом.";
+            } else {
+              pickStatus.textContent =
+                "😔 По вашим фильтрам не найдено демо-товаров. Попробуйте снизить пороги или изменить налог.";
+            }
+          } else {
+            currentProducts = demo.slice(0, 5);
+            results.innerHTML = currentProducts
+              .map((p, idx) => cardHtml(p, idx))
+              .join("");
+            attachCardHandlers();
+            pickStatus.textContent = "Показаны демо-результаты (API недоступно).";
+          }
         } finally {
           btnFind.disabled = false;
         }
