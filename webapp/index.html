@@ -201,10 +201,12 @@
         text-align: center;
         padding: 8px 10px;
         border-radius: 12px;
-        border: 1px solid var(--border);
-        color: var(--text);
+        border: 1px solid #444;
+        background: #2a2a2a;
+        color: #ffffff;
         text-decoration: none;
         font-size: 13px;
+        cursor: pointer;
       }
 
       .hidden {
@@ -325,6 +327,36 @@
               <button class="pillbtn wb active" data-platform="wb">WB</button>
               <button class="pillbtn ozon" data-platform="ozon">Ozon</button>
               <button class="pillbtn both" data-platform="both">Обе</button>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 10px">
+            <label>Сезонность</label>
+            <div class="platform-btns" id="month-btns">
+              <button class="pillbtn" data-month="январь">Янв</button>
+              <button class="pillbtn" data-month="февраль">Фев</button>
+              <button class="pillbtn" data-month="март">Мар</button>
+              <button class="pillbtn" data-month="апрель">Апр</button>
+              <button class="pillbtn" data-month="май">Май</button>
+              <button class="pillbtn" data-month="июнь">Июн</button>
+              <button class="pillbtn" data-month="июль">Июл</button>
+              <button class="pillbtn" data-month="август">Авг</button>
+              <button class="pillbtn" data-month="сентябрь">Сен</button>
+              <button class="pillbtn" data-month="октябрь">Окт</button>
+              <button class="pillbtn" data-month="ноябрь">Ноя</button>
+              <button class="pillbtn" data-month="декабрь">Дек</button>
+              <button class="pillbtn both active" data-month="">Пропустить</button>
+            </div>
+            <div class="muted" style="margin-top: 6px">
+              Месяц используется как фильтр сезонности (в демо — для отображения).
+            </div>
+          </div>
+
+          <div style="margin-bottom: 10px">
+            <label>Налог</label>
+            <div class="platform-btns" id="tax-btns">
+              <button class="pillbtn active" data-tax="0.06">УСН 6%</button>
+              <button class="pillbtn" data-tax="0.15">УСН 15%</button>
             </div>
           </div>
 
@@ -801,6 +833,7 @@
             buyout_rate: 0.6,
             trend: "growth",
             seasonality: ["март", "апрель", "ноябрь"],
+            missed_revenue: 8_500_000,
           },
           competitors: [
             {
@@ -835,6 +868,7 @@
             buyout_rate: 0.55,
             trend: "growth",
             seasonality: ["январь", "февраль", "сентябрь"],
+            missed_revenue: 1_800_000,
           },
           competitors: [
             {
@@ -869,6 +903,7 @@
             buyout_rate: 0.48,
             trend: "growth",
             seasonality: ["декабрь", "январь", "март"],
+            missed_revenue: 4_200_000,
           },
           competitors: [
             {
@@ -903,6 +938,7 @@
             buyout_rate: 0.5,
             trend: "stable",
             seasonality: ["сентябрь", "октябрь", "ноябрь"],
+            missed_revenue: 2_100_000,
           },
           competitors: [
             {
@@ -937,6 +973,7 @@
             buyout_rate: 0.58,
             trend: "growth",
             seasonality: ["февраль", "март", "апрель"],
+            missed_revenue: 3_300_000,
           },
           competitors: [
             {
@@ -990,6 +1027,57 @@
         const verdict = extra.verdict || "";
         const vColor = extra.verdict_color || "yellow";
 
+        // ===== Юнит-экономика (как в Telegram боте) =====
+        const salePrice = Number(p.sale_price || 0);
+        const budget = Number(p._budget || 0);
+        const taxRate = Number(p._taxRate || 0.06);
+        // Закупку оцениваем как 20% от цены продажи (если не пришло с API)
+        const purchaseRub = Number(p.purchase_rub || Math.round(salePrice * 0.2));
+
+        const COMMISSION_RATE = 0.15;
+        const LOGISTICS_WB = 150;
+        const STORAGE_WB = 15;
+        const SPP_RATE = 0.05;
+        const ADS_RATE = 0.15;
+        const FULFILLMENT = 50;
+        const LOGISTICS_CN = 56;
+        const OTHER_TOTAL = 15000;
+
+        const fullCost = purchaseRub + LOGISTICS_CN + FULFILLMENT;
+        const units = fullCost > 0 ? Math.floor(budget / fullCost) : 0;
+        const otherPerUnit = units > 0 ? OTHER_TOTAL / units : OTHER_TOTAL;
+        const commission = salePrice * COMMISSION_RATE;
+        const spp = salePrice * SPP_RATE;
+        const ads = salePrice * ADS_RATE;
+        const tax = salePrice * taxRate;
+        const totalExpenses =
+          commission +
+          LOGISTICS_WB +
+          STORAGE_WB +
+          spp +
+          ads +
+          tax +
+          otherPerUnit;
+
+        const netProfitPerUnit = salePrice - fullCost - totalExpenses;
+        const marginPercent = salePrice > 0 ? (netProfitPerUnit / salePrice) * 100 : 0;
+        const roiPercent = fullCost > 0 ? (netProfitPerUnit / fullCost) * 100 : 0;
+        const paybackMonths = netProfitPerUnit > 0 ? fullCost / netProfitPerUnit : 0;
+        const profitPerMonth = netProfitPerUnit * units;
+
+        let verdictAuto = "🟡 РИСК";
+        let verdictColorAuto = "yellow";
+        if (marginPercent > 25 && roiPercent > 60) {
+          verdictAuto = "🟢 БРАТЬ";
+          verdictColorAuto = "green";
+        } else if (marginPercent < 15 || roiPercent < 30) {
+          verdictAuto = "🔴 НЕ БРАТЬ";
+          verdictColorAuto = "red";
+        }
+
+        const verdictFinal = verdict || verdictAuto;
+        const verdictColorFinal = verdict ? vColor : verdictColorAuto;
+
         modalTitle.textContent = p.title;
 
         const season =
@@ -1022,10 +1110,10 @@
                 )
                 .join("<hr style=\"border:none;border-top:1px solid #30363d;margin:6px 0;\"/>");
 
-        const vHtml = verdict
+        const vHtml = verdictFinal
           ? `<span class="verdict-tag ${verdictClass(
-              vColor
-            )}">${verdict}</span>`
+              verdictColorFinal
+            )}">${verdictFinal}</span>`
           : "";
 
         modalBody.innerHTML = `
@@ -1040,6 +1128,8 @@
             )}%</div>
             <div>📈 Тренд: ${trendSymbol}</div>
             <div>📆 Сезонность: ${season}</div>
+            <div>✅ Монополист: ${p.monopolist ? "ДА" : "НЕТ"}</div>
+            <div>💸 Упущенная выручка: ${fmtMoney(niche.missed_revenue ?? 0)} ₽/мес</div>
           </div>
           <div class="modal-section">
             <h3>Топ-3 конкурента</h3>
@@ -1053,6 +1143,31 @@
                 Открыть поиск поставщиков 🇨🇳
               </a>
             </div>
+          </div>
+          <div class="modal-section">
+            <h3>Юнит-экономика</h3>
+            <div><b>Цена продажи:</b> ${fmtMoney(salePrice)} ₽</div>
+            <div><b>Цена закупки:</b> ${fmtMoney(purchaseRub)} ₽</div>
+            <div><b>Единиц на бюджет:</b> ${fmtMoney(units)} шт</div>
+            <div style="margin-top: 6px"><b>Вычитаем:</b></div>
+            <div>- Комиссия WB (15%): — ${fmtMoney(commission)} ₽</div>
+            <div>- Логистика WB: — ${fmtMoney(LOGISTICS_WB)} ₽</div>
+            <div>- Хранение: — ${fmtMoney(STORAGE_WB)} ₽</div>
+            <div>- СПП (5%): — ${fmtMoney(spp)} ₽</div>
+            <div>- Реклама (15%): — ${fmtMoney(ads)} ₽</div>
+            <div>- Налог УСН ${Math.round(taxRate * 100)}%: — ${fmtMoney(tax)} ₽</div>
+            <div>- Фулфилмент: — ${fmtMoney(FULFILLMENT)} ₽</div>
+            <div>- Логистика Китай: — ${fmtMoney(LOGISTICS_CN)} ₽</div>
+            <div>- Прочие (/шт): — ${fmtMoney(otherPerUnit)} ₽</div>
+            <div style="margin-top: 6px"><b>Себестоимость (полная):</b> ${fmtMoney(fullCost)} ₽</div>
+            <div><b>Итого расходов:</b> ${fmtMoney(totalExpenses)} ₽</div>
+            <div><b>Чистая прибыль:</b> ${fmtMoney(netProfitPerUnit)} ₽/шт</div>
+            <div style="margin-top: 6px">
+              📊 Маржа: ${marginPercent.toFixed(1)}% |
+              ROI: ${roiPercent.toFixed(1)}% |
+              ⏱ Окупаемость: ${paybackMonths.toFixed(1)} мес
+            </div>
+            <div>💵 Прибыль/мес: ~${fmtMoney(profitPerMonth)} ₽</div>
           </div>
           <div class="modal-section">
             <h3>Вердикт</h3>
