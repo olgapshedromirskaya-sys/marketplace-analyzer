@@ -4,7 +4,7 @@
 """
 import logging
 from enum import IntEnum, auto
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from telegram import (
     Update,
@@ -1371,10 +1371,18 @@ async def send_autopick_card(
 # ===== НАСТРОЙКИ =====
 
 
+def settings_keyboard_for_owner() -> InlineKeyboardMarkup:
+    """Клавиатура настроек с кнопкой «Сотрудники» (показывается только владельцу)."""
+    return InlineKeyboardMarkup(
+        [[InlineKeyboardButton("👥 Сотрудники", callback_data="menu_staff")]]
+    )
+
+
 async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await ensure_access(update, context):
         return
-    token = get_mpstats_token(update.effective_user.id)
+    user_id = update.effective_user.id
+    token = get_mpstats_token(user_id)
     token_status = "✅ задан" if token else "❌ не задан"
     text = (
         "⚙️ Настройки:\n"
@@ -1382,7 +1390,67 @@ async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         "- История анализов: /history\n"
         "- Ваш Telegram ID: /myid\n"
     )
-    await update.effective_chat.send_message(text)
+    if is_owner(user_id):
+        await update.effective_chat.send_message(
+            text,
+            reply_markup=settings_keyboard_for_owner(),
+        )
+    else:
+        await update.effective_chat.send_message(text)
+
+
+async def staff_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Обработка кнопок из меню «Сотрудники». Видит только владелец (OWNER/ADMIN_ID).
+    menu_staff — список сотрудников и кнопки Добавить / Удалить / Назад;
+    staff_add / staff_remove — подсказка по командам; staff_back — вернуться в настройки.
+    """
+    query = update.callback_query
+    await query.answer()
+    if not can_manage_staff(update.effective_user.id):
+        await query.message.reply_text(access_denied_text())
+        return
+    data = (query.data or "").strip()
+    if data == "menu_staff":
+        staff = list_staff()
+        if not staff:
+            lines = ["👥 Сотрудники\n\nСписок пуст."]
+        else:
+            lines = ["👥 Сотрудники:\n"]
+            for s in staff:
+                role_label = "ВЛАДЕЛЕЦ" if s["role"] == "owner" else "АДМИН"
+                uname = s.get("username") or "-"
+                if uname != "-" and not str(uname).startswith("@"):
+                    uname = f"@{uname}"
+                lines.append(f"• {role_label} {s['user_id']} ({uname})")
+        kb = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("➕ Добавить сотрудника", callback_data="staff_add")],
+                [InlineKeyboardButton("➖ Удалить сотрудника", callback_data="staff_remove")],
+                [InlineKeyboardButton("◀️ Назад", callback_data="staff_back")],
+            ]
+        )
+        await query.message.reply_text("\n".join(lines), reply_markup=kb)
+    elif data == "staff_add":
+        await query.message.reply_text(
+            "Чтобы добавить администратора, используйте:\n"
+            "/addstaff @username или /addstaff ID"
+        )
+    elif data == "staff_remove":
+        await query.message.reply_text(
+            "Чтобы удалить администратора, используйте:\n"
+            "/removestaff @username или /removestaff ID"
+        )
+    elif data == "staff_back":
+        token = get_mpstats_token(update.effective_user.id)
+        token_status = "✅ задан" if token else "❌ не задан"
+        text = (
+            "⚙️ Настройки:\n"
+            f"- MPStats токен: {token_status} (команда /settoken)\n"
+            "- История анализов: /history\n"
+            "- Ваш Telegram ID: /myid\n"
+        )
+        await query.message.reply_text(text, reply_markup=settings_keyboard_for_owner())
 
 
 # ===== РОУТЕР КНОПОК =====
@@ -1497,6 +1565,12 @@ def build_application() -> Application:
     )
     app.add_handler(china_conv)
     app.add_handler(CallbackQueryHandler(watch_add_callback, pattern=r"^watch_add:"))
+    app.add_handler(
+        CallbackQueryHandler(
+        staff_menu_callback,
+        pattern=r"^(menu_staff|staff_add|staff_remove|staff_back)$",
+    )
+    )
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
     return app
 
