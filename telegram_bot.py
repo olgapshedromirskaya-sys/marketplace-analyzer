@@ -31,6 +31,13 @@ from database import (
     remove_user,
     list_users,
     is_user_allowed,
+    get_user_role,
+    upsert_telegram_user,
+    add_staff,
+    remove_staff,
+    list_staff,
+    update_staff_username,
+    get_user_id_by_username,
     set_mpstats_token,
     get_mpstats_token,
     save_analysis,
@@ -127,22 +134,27 @@ def access_denied_text() -> str:
     return "⛔ Доступ закрыт. Для получения доступа обратитесь к администратору."
 
 
-def user_is_admin(user_id: int) -> bool:
-    """
-    Проверка, является ли пользователь администратором.
-    """
-    return user_id == settings.admin_id
+def is_owner(user_id: int) -> bool:
+    """Проверка: пользователь — владелец (ADMIN_ID из .env)."""
+    return get_user_role(user_id) == "owner"
+
+
+def can_manage_staff(user_id: int) -> bool:
+    """Проверка: может добавлять/удалять администраторов и смотреть /stafflist."""
+    return is_owner(user_id)
+
+
+def can_manage_clients(user_id: int) -> bool:
+    """Проверка: может добавлять/удалять клиентов (/adduser, /removeuser)."""
+    role = get_user_role(user_id)
+    return role in ("owner", "admin")
 
 
 def user_allowed(update: Update) -> bool:
     """
-    Проверка доступа пользователя: админ всегда имеет доступ,
-    остальные — только если есть в whitelist.
+    Проверка доступа к боту: владелец, администратор или клиент в whitelist.
     """
-    uid = update.effective_user.id
-    if user_is_admin(uid):
-        return True
-    return is_user_allowed(uid)
+    return is_user_allowed(update.effective_user.id)
 
 
 async def ensure_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
@@ -162,9 +174,14 @@ async def ensure_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Обработчик команды /start.
-    При отсутствии доступа — только текст отказа, без кнопок меню.
+    Сохраняем user_id и username в БД, проверяем роль из БД. При отсутствии доступа — отказ без меню.
     """
-    if not user_allowed(update):
+    user = update.effective_user
+    upsert_telegram_user(user.id, user.username)
+    role = get_user_role(user.id)
+    if role in ("owner", "admin"):
+        update_staff_username(user.id, user.username)
+    if role is None:
         await update.effective_chat.send_message(access_denied_text())
         return
 
@@ -186,54 +203,152 @@ async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
-# ===== АДМИН-КОМАНДЫ =====
+# ===== КОМАНДЫ УПРАВЛЕНИЯ (РОЛИ) =====
 
 
 async def adduser_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not user_is_admin(update.effective_user.id):
+    """Добавить клиента в whitelist. Доступно: владелец, администратор."""
+    if not can_manage_clients(update.effective_user.id):
         await update.effective_chat.send_message(access_denied_text())
         return
     if not context.args:
-        await update.effective_chat.send_message("Использование: /adduser 123456789")
+        await update.effective_chat.send_message("Использование: /adduser 123456789 или /adduser @username")
         return
-    try:
-        uid = int(context.args[0])
-    except ValueError:
-        await update.effective_chat.send_message("user_id должен быть числом.")
-        return
+    raw = context.args[0].strip()
+    if raw.startswith("@"):
+        uid = get_user_id_by_username(raw)
+        if uid is None:
+            await update.effective_chat.send_message(
+                f"Пользователь {raw} не найден. Он должен хотя бы раз нажать /start в боте."
+            )
+            return
+    else:
+        try:
+            uid = int(raw)
+        except ValueError:
+            await update.effective_chat.send_message("Укажите числовой ID или @username.")
+            return
     add_user(uid, username=None, is_active=True)
     await update.effective_chat.send_message(f"Пользователь {uid} добавлен в whitelist.")
 
 
 async def removeuser_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not user_is_admin(update.effective_user.id):
+    """Удалить клиента из whitelist. Доступно: владелец, администратор."""
+    if not can_manage_clients(update.effective_user.id):
         await update.effective_chat.send_message(access_denied_text())
         return
     if not context.args:
-        await update.effective_chat.send_message("Использование: /removeuser 123456789")
+        await update.effective_chat.send_message("Использование: /removeuser 123456789 или /removeuser @username")
         return
-    try:
-        uid = int(context.args[0])
-    except ValueError:
-        await update.effective_chat.send_message("user_id должен быть числом.")
-        return
+    raw = context.args[0].strip()
+    if raw.startswith("@"):
+        uid = get_user_id_by_username(raw)
+        if uid is None:
+            await update.effective_chat.send_message(f"Пользователь {raw} не найден.")
+            return
+    else:
+        try:
+            uid = int(raw)
+        except ValueError:
+            await update.effective_chat.send_message("Укажите числовой ID или @username.")
+            return
     remove_user(uid)
-    await update.effective_chat.send_message(f"Пользователь {uid} заблокирован.")
+    await update.effective_chat.send_message(f"Пользователь {uid} удалён из whitelist.")
 
 
 async def users_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not user_is_admin(update.effective_user.id):
+    """Список клиентов (whitelist). Доступно: владелец, администратор."""
+    if not can_manage_clients(update.effective_user.id):
         await update.effective_chat.send_message(access_denied_text())
         return
     users = list_users()
     if not users:
-        await update.effective_chat.send_message("Пользователей пока нет.")
+        await update.effective_chat.send_message("Клиентов пока нет.")
         return
     lines = []
     for u in users:
         status = "✅" if u["is_active"] else "❌"
         lines.append(f"{status} {u['user_id']} ({u.get('username') or '-'})")
-    await update.effective_chat.send_message("Пользователи:\n" + "\n".join(lines))
+    await update.effective_chat.send_message("Клиенты (whitelist):\n" + "\n".join(lines))
+
+
+async def addstaff_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Добавить администратора. Только владелец."""
+    if not can_manage_staff(update.effective_user.id):
+        await update.effective_chat.send_message(access_denied_text())
+        return
+    if not context.args:
+        await update.effective_chat.send_message("Использование: /addstaff @username или /addstaff 123456789")
+        return
+    raw = context.args[0].strip()
+    if raw.startswith("@"):
+        uid = get_user_id_by_username(raw)
+        if uid is None:
+            await update.effective_chat.send_message(
+                f"Пользователь {raw} не найден. Он должен хотя бы раз нажать /start в боте."
+            )
+            return
+        username = raw.lstrip("@")
+    else:
+        try:
+            uid = int(raw)
+        except ValueError:
+            await update.effective_chat.send_message("Укажите @username или числовой ID.")
+            return
+        username = None
+    if get_user_role(uid) == "owner":
+        await update.effective_chat.send_message("Владельца нельзя добавить повторно.")
+        return
+    add_staff(update.effective_user.id, uid, username, role="admin")
+    await update.effective_chat.send_message(f"Администратор {uid} ({username or '-'}) добавлен.")
+
+
+async def removestaff_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Удалить администратора. Только владелец."""
+    if not can_manage_staff(update.effective_user.id):
+        await update.effective_chat.send_message(access_denied_text())
+        return
+    if not context.args:
+        await update.effective_chat.send_message("Использование: /removestaff @username или /removestaff 123456789")
+        return
+    raw = context.args[0].strip()
+    if raw.startswith("@"):
+        uid = get_user_id_by_username(raw)
+        if uid is None:
+            await update.effective_chat.send_message(f"Пользователь {raw} не найден.")
+            return
+    else:
+        try:
+            uid = int(raw)
+        except ValueError:
+            await update.effective_chat.send_message("Укажите @username или числовой ID.")
+            return
+    if uid == settings.admin_id:
+        await update.effective_chat.send_message("Владельца удалить нельзя.")
+        return
+    if remove_staff(uid):
+        await update.effective_chat.send_message(f"Пользователь {uid} снят с роли администратора.")
+    else:
+        await update.effective_chat.send_message("Пользователь не был администратором или уже удалён.")
+
+
+async def stafflist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Список сотрудников (владелец + администраторы). Только владелец."""
+    if not can_manage_staff(update.effective_user.id):
+        await update.effective_chat.send_message(access_denied_text())
+        return
+    staff = list_staff()
+    if not staff:
+        await update.effective_chat.send_message("Сотрудников пока нет.")
+        return
+    lines = []
+    for s in staff:
+        role_label = "ВЛАДЕЛЕЦ" if s["role"] == "owner" else "АДМИН"
+        uname = (s.get("username") or "-")
+        if uname != "-" and not uname.startswith("@"):
+            uname = f"@{uname}"
+        lines.append(f"{role_label} {s['user_id']} ({uname})")
+    await update.effective_chat.send_message("Сотрудники:\n" + "\n".join(lines))
 
 
 # ===== УСТАНОВКА MPSTATS ТОКЕНА =====
@@ -1308,6 +1423,9 @@ def build_application() -> Application:
     app.add_handler(CommandHandler("adduser", adduser_cmd))
     app.add_handler(CommandHandler("removeuser", removeuser_cmd))
     app.add_handler(CommandHandler("users", users_cmd))
+    app.add_handler(CommandHandler("addstaff", addstaff_cmd))
+    app.add_handler(CommandHandler("removestaff", removestaff_cmd))
+    app.add_handler(CommandHandler("stafflist", stafflist_cmd))
     app.add_handler(CommandHandler("history", history_cmd))
     token_conv = ConversationHandler(
         entry_points=[CommandHandler("settoken", settoken_start)],

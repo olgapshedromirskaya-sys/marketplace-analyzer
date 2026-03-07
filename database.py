@@ -94,6 +94,52 @@ def _init_db_core() -> None:
             """
         )
 
+        # Сотрудники: владелец (owner) и администраторы (admin). Роли для доступа к боту.
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS staff (
+                user_id INTEGER PRIMARY KEY,
+                username TEXT,
+                role TEXT NOT NULL,
+                added_by INTEGER,
+                added_at TEXT
+            )
+            """
+        )
+
+        # Все, кто хотя бы раз нажал /start — для разрешения @username в /addstaff
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS telegram_users (
+                user_id INTEGER PRIMARY KEY,
+                username TEXT,
+                first_seen TEXT
+            )
+            """
+        )
+    _ensure_owner_in_staff()
+
+
+def _ensure_owner_in_staff() -> None:
+    """Добавляет владельца (ADMIN_ID из .env) в таблицу staff, если его ещё нет."""
+    if not settings.admin_id:
+        return
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT 1 FROM staff WHERE user_id = ? AND role = 'owner'",
+            (settings.admin_id,),
+        )
+        if cur.fetchone():
+            return
+        cur.execute(
+            """
+            INSERT INTO staff (user_id, username, role, added_by, added_at)
+            VALUES (?, NULL, 'owner', NULL, ?)
+            """,
+            (settings.admin_id, datetime.utcnow().isoformat()),
+        )
+
 
 async def init_db() -> None:
     """
@@ -156,21 +202,145 @@ def list_users() -> List[Dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
-def is_user_allowed(user_id: int) -> bool:
+def upsert_telegram_user(user_id: int, username: Optional[str] = None) -> None:
     """
-    Проверяет, есть ли пользователь в whitelist.
-    Администратор всегда имеет доступ.
+    Сохраняет/обновляет пользователя, нажавшего /start.
+    Нужно для разрешения @username в /addstaff.
     """
-    if user_id == settings.admin_id:
-        return True
     with get_connection() as conn:
         cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO telegram_users (user_id, username, first_seen)
+            VALUES (?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET username = excluded.username
+            """,
+            (user_id, username, datetime.utcnow().isoformat()),
+        )
+
+
+def get_user_role(user_id: int) -> Optional[str]:
+    """
+    Возвращает роль пользователя: 'owner' | 'admin' | 'user' | None.
+    owner — ADMIN_ID из .env (есть в staff),
+    admin — добавлен владельцем в staff,
+    user — есть в whitelist (users.is_active),
+    None — доступа нет.
+    """
+    if user_id == settings.admin_id:
+        with get_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT role FROM staff WHERE user_id = ?",
+                (user_id,),
+            )
+            row = cur.fetchone()
+        if row:
+            return row["role"]
+        return "owner"
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT role FROM staff WHERE user_id = ?",
+            (user_id,),
+        )
+        row = cur.fetchone()
+        if row:
+            return row["role"]
         cur.execute(
             "SELECT is_active FROM users WHERE user_id = ?",
             (user_id,),
         )
         row = cur.fetchone()
-    return bool(row and row["is_active"])
+        if row and row["is_active"]:
+            return "user"
+    return None
+
+
+def is_user_allowed(user_id: int) -> bool:
+    """
+    Проверяет доступ к боту: владелец, администратор или клиент в whitelist.
+    """
+    return get_user_role(user_id) is not None
+
+
+def add_staff(added_by_user_id: int, target_user_id: int, username: Optional[str], role: str = "admin") -> bool:
+    """
+    Добавляет администратора в staff. Только владелец может добавлять.
+    Возвращает True при успехе.
+    """
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO staff (user_id, username, role, added_by, added_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                username = excluded.username,
+                role = excluded.role,
+                added_by = excluded.added_by,
+                added_at = excluded.added_at
+            """,
+            (target_user_id, username, role, added_by_user_id, datetime.utcnow().isoformat()),
+        )
+    return True
+
+
+def remove_staff(target_user_id: int) -> bool:
+    """
+    Удаляет из staff (только роль admin; владельца удалить нельзя).
+    Возвращает True если запись удалена.
+    """
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "DELETE FROM staff WHERE user_id = ? AND role = 'admin'",
+            (target_user_id,),
+        )
+        return cur.rowcount > 0
+
+
+def list_staff() -> List[Dict[str, Any]]:
+    """
+    Возвращает список всех сотрудников (staff): владелец и администраторы.
+    """
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT user_id, username, role, added_by, added_at FROM staff ORDER BY role = 'owner' DESC, added_at ASC"
+        )
+        rows = cur.fetchall()
+    return [dict(r) for r in rows]
+
+
+def update_staff_username(user_id: int, username: Optional[str]) -> None:
+    """Обновляет username в записи staff (для владельца/админа при /start)."""
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE staff SET username = ? WHERE user_id = ?",
+            (username, user_id),
+        )
+
+
+def get_user_id_by_username(username: str) -> Optional[int]:
+    """
+    Возвращает user_id по Telegram username (без @).
+    Ищет в telegram_users (кто хотя бы раз нажал /start).
+    """
+    if not username:
+        return None
+    name = username.lstrip("@").strip().lower()
+    if not name:
+        return None
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT user_id FROM telegram_users WHERE LOWER(REPLACE(COALESCE(username,''), '@', '')) = ?",
+            (name,),
+        )
+        row = cur.fetchone()
+    return int(row["user_id"]) if row else None
 
 
 def set_mpstats_token(user_id: int, token: str) -> None:
@@ -372,6 +542,13 @@ __all__ = [
     "remove_user",
     "list_users",
     "is_user_allowed",
+    "get_user_role",
+    "upsert_telegram_user",
+    "add_staff",
+    "remove_staff",
+    "list_staff",
+    "update_staff_username",
+    "get_user_id_by_username",
     "set_mpstats_token",
     "get_mpstats_token",
     "save_analysis",
