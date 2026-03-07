@@ -96,6 +96,12 @@ class AutoPickStates(IntEnum):
     MONTH = auto()
 
 
+class StaffStates(IntEnum):
+    """Стадии диалога добавления/удаления сотрудника (только владелец)."""
+    WAITING_STAFF_ID = auto()   # ожидание ID нового сотрудника (кнопка ➕)
+    REMOVE_WAIT_ID = auto()     # ожидание ID для удаления (кнопка ➖)
+
+
 # ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
 
 
@@ -1386,24 +1392,99 @@ async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     token_status = "✅ задан" if token else "❌ не задан"
     text = (
         "⚙️ Настройки:\n"
-        f"- MPStats токен: {token_status} (команда /settoken)\n"
+        f"- MPStats токен: {token_status}\n"
         "- История анализов: /history\n"
         "- Ваш Telegram ID: /myid\n"
     )
+    kb_buttons = [[InlineKeyboardButton("🔑 Установить MPStats токен", callback_data="set_token")]]
     if is_owner(user_id):
-        await update.effective_chat.send_message(
-            text,
-            reply_markup=settings_keyboard_for_owner(),
-        )
+        kb_buttons.append([InlineKeyboardButton("👥 Сотрудники", callback_data="menu_staff")])
+    await update.effective_chat.send_message(
+        text, reply_markup=InlineKeyboardMarkup(kb_buttons)
+    )
+
+
+async def staff_add_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Вход в диалог добавления сотрудника (кнопка ➕). Только владелец."""
+    logger.warning("staff_add_entry called by user %s", update.effective_user.id)
+    query = update.callback_query
+    await query.answer()
+    if not can_manage_staff(update.effective_user.id):
+        await query.message.reply_text(access_denied_text())
+        return ConversationHandler.END
+    await query.message.reply_text("Введите Telegram ID нового сотрудника:")
+    return StaffStates.WAITING_STAFF_ID
+
+
+async def staff_add_receive_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Приём ID и добавление в staff с ролью admin (состояние WAITING_STAFF_ID)."""
+    logger.warning("staff_add_receive_id called, message: %s", update.message.text)
+    text = (update.message.text or "").strip()
+    try:
+        uid = int(text)
+    except ValueError:
+        await update.message.reply_text("Введите число (Telegram ID). Попробуйте снова или /cancel")
+        return StaffStates.WAITING_STAFF_ID
+    if uid == settings.admin_id:
+        await update.message.reply_text("Это ID владельца. Используйте другой ID или /cancel")
+        return StaffStates.WAITING_STAFF_ID
+    add_staff(update.effective_user.id, uid, None, role="admin")
+    await update.message.reply_text("✅ Сотрудник добавлен")
+    return ConversationHandler.END
+
+
+async def staff_remove_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Вход в диалог удаления сотрудника (кнопка ➖). Показать список и запросить ID."""
+    query = update.callback_query
+    await query.answer()
+    if not can_manage_staff(update.effective_user.id):
+        await query.message.reply_text(access_denied_text())
+        return ConversationHandler.END
+    staff = list_staff()
+    if not staff:
+        await query.message.reply_text("Список сотрудников пуст. Нечего удалять.")
+        return ConversationHandler.END
+    lines = ["👥 Текущие сотрудники (ID для удаления):\n"]
+    for s in staff:
+        role_label = "ВЛАДЕЛЕЦ" if s["role"] == "owner" else "АДМИН"
+        uname = s.get("username") or "-"
+        if uname != "-" and not str(uname).startswith("@"):
+            uname = f"@{uname}"
+        lines.append(f"• {s['user_id']} — {role_label} ({uname})")
+    lines.append("\nВведите ID сотрудника для удаления:")
+    await query.message.reply_text("\n".join(lines))
+    return StaffStates.REMOVE_WAIT_ID
+
+
+async def staff_remove_receive_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Приём ID и удаление из staff."""
+    text = (update.message.text or "").strip()
+    try:
+        uid = int(text)
+    except ValueError:
+        await update.message.reply_text("Введите число (ID сотрудника). Попробуйте снова или /cancel")
+        return StaffStates.REMOVE_WAIT_ID
+    if uid == settings.admin_id:
+        await update.message.reply_text("Владельца удалить нельзя. Введите ID администратора или /cancel")
+        return StaffStates.REMOVE_WAIT_ID
+    if remove_staff(uid):
+        await update.message.reply_text("✅ Сотрудник удалён")
     else:
-        await update.effective_chat.send_message(text)
+        await update.message.reply_text("Пользователь не найден в списке администраторов или уже удалён.")
+    return ConversationHandler.END
+
+
+async def staff_conv_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Отмена диалога добавления/удаления сотрудника."""
+    await update.message.reply_text("Отменено.")
+    return ConversationHandler.END
 
 
 async def staff_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Обработка кнопок из меню «Сотрудники». Видит только владелец (OWNER/ADMIN_ID).
-    menu_staff — список сотрудников и кнопки Добавить / Удалить / Назад;
-    staff_add / staff_remove — подсказка по командам; staff_back — вернуться в настройки.
+    Обработка кнопок из меню «Сотрудники» (только владелец).
+    menu_staff — список сотрудников и кнопки; staff_back — вернуться в настройки.
+    staff_add / staff_remove обрабатываются ConversationHandler.
     """
     query = update.callback_query
     await query.answer()
@@ -1431,16 +1512,6 @@ async def staff_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
             ]
         )
         await query.message.reply_text("\n".join(lines), reply_markup=kb)
-    elif data == "staff_add":
-        await query.message.reply_text(
-            "Чтобы добавить администратора, используйте:\n"
-            "/addstaff @username или /addstaff ID"
-        )
-    elif data == "staff_remove":
-        await query.message.reply_text(
-            "Чтобы удалить администратора, используйте:\n"
-            "/removestaff @username или /removestaff ID"
-        )
     elif data == "staff_back":
         token = get_mpstats_token(update.effective_user.id)
         token_status = "✅ задан" if token else "❌ не задан"
@@ -1495,6 +1566,26 @@ def build_application() -> Application:
     app.add_handler(CommandHandler("removestaff", removestaff_cmd))
     app.add_handler(CommandHandler("stafflist", stafflist_cmd))
     app.add_handler(CommandHandler("history", history_cmd))
+    # Диалог сотрудников первым, чтобы ввод ID не перехватывали другие обработчики и MessageHandler
+    staff_conv = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(staff_add_entry, pattern=r"^staff_add$"),
+            CallbackQueryHandler(staff_remove_entry, pattern=r"^staff_remove$"),
+        ],
+        states={
+            StaffStates.WAITING_STAFF_ID: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, staff_add_receive_id),
+            ],
+            StaffStates.REMOVE_WAIT_ID: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, staff_remove_receive_id),
+            ],
+        },
+        fallbacks=[CommandHandler("cancel", staff_conv_cancel)],
+        per_chat=True,
+        per_user=True,
+        name="staff_conv",
+    )
+    app.add_handler(staff_conv)
     token_conv = ConversationHandler(
         entry_points=[CommandHandler("settoken", settoken_start)],
         states={
@@ -1565,11 +1656,12 @@ def build_application() -> Application:
     )
     app.add_handler(china_conv)
     app.add_handler(CallbackQueryHandler(watch_add_callback, pattern=r"^watch_add:"))
+    # Меню «Сотрудники»: только список и кнопки menu_staff / staff_back (НЕ staff_add, staff_remove — те в staff_conv)
     app.add_handler(
         CallbackQueryHandler(
-        staff_menu_callback,
-        pattern=r"^(menu_staff|staff_add|staff_remove|staff_back)$",
-    )
+            staff_menu_callback,
+            pattern=r"^(menu_staff|staff_back|staff_list)$",
+        )
     )
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
     return app

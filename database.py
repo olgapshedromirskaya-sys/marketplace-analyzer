@@ -219,6 +219,26 @@ def upsert_telegram_user(user_id: int, username: Optional[str] = None) -> None:
         )
 
 
+def is_user_allowed(user_id: int) -> bool:
+    """
+    Проверяет доступ к боту. Доступ есть, если пользователь:
+    1) ADMIN_ID из .env (владелец), или
+    2) есть в таблице staff (владелец/сотрудник), или
+    3) есть в таблице users с is_active = 1 (клиент).
+    """
+    if settings.admin_id and user_id == settings.admin_id:
+        return True
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM staff WHERE user_id = ?", (user_id,))
+        if cur.fetchone():
+            return True
+        cur.execute("SELECT 1 FROM users WHERE user_id = ? AND is_active = 1", (user_id,))
+        if cur.fetchone():
+            return True
+    return False
+
+
 def get_user_role(user_id: int) -> Optional[str]:
     """
     Возвращает роль пользователя: 'owner' | 'admin' | 'user' | None.
@@ -227,7 +247,7 @@ def get_user_role(user_id: int) -> Optional[str]:
     user — есть в whitelist (users.is_active),
     None — доступа нет.
     """
-    if user_id == settings.admin_id:
+    if settings.admin_id and user_id == settings.admin_id:
         with get_connection() as conn:
             cur = conn.cursor()
             cur.execute(
@@ -255,13 +275,6 @@ def get_user_role(user_id: int) -> Optional[str]:
         if row and row["is_active"]:
             return "user"
     return None
-
-
-def is_user_allowed(user_id: int) -> bool:
-    """
-    Проверяет доступ к боту: владелец, администратор или клиент в whitelist.
-    """
-    return get_user_role(user_id) is not None
 
 
 def add_staff(added_by_user_id: int, target_user_id: int, username: Optional[str], role: str = "admin") -> bool:
