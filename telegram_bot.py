@@ -3,6 +3,7 @@
 Используется в run.py, т.к. имя «bot» занято пакетом bot/.
 """
 import logging
+from datetime import datetime
 from enum import IntEnum, auto
 from typing import Any, Dict, Optional
 
@@ -43,6 +44,8 @@ from database import (
     save_analysis,
     get_latest_analyses,
     add_to_watchlist,
+    get_watchlist_by_user,
+    remove_from_watchlist,
 )
 from mpstats import MPStatsClient, NicheParams
 from calculator import CalcInput, calculate_unit_economics
@@ -53,6 +56,19 @@ from calculator_handler import build_calculator_conv
 
 
 logger = logging.getLogger(__name__)
+
+
+def fmt_date(iso_dt_str: Optional[str]) -> str:
+    """
+    Форматирует дату из ISO-строки (например из БД) в вид «15.03.2026 17:31».
+    """
+    if not iso_dt_str:
+        return "—"
+    try:
+        dt = datetime.fromisoformat(iso_dt_str.replace("Z", "+00:00"))
+        return dt.strftime("%d.%m.%Y %H:%M")
+    except (ValueError, TypeError):
+        return str(iso_dt_str)[:16] if iso_dt_str else "—"
 
 
 # ===== СТАДИИ ДЛЯ ДИАЛОГОВ =====
@@ -686,23 +702,123 @@ async def trend_pick_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     return ConversationHandler.END
 
 
-# ===== ИСТОРИЯ =====
+# ===== ИСТОРИЯ АНАЛИЗОВ =====
 
 
 async def history_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    «📊 История анализов» — список прошлых анализов пользователя с результатами.
+    Формат: #1 — «запрос» | WB | 15.03.2026 17:31
+    """
     if not await ensure_access(update, context):
         return
-    analyses = get_latest_analyses(update.effective_user.id, limit=5)
+    analyses = get_latest_analyses(update.effective_user.id, limit=20)
     if not analyses:
-        await update.effective_chat.send_message("История пуста.")
+        await update.effective_chat.send_message("📊 История анализов пуста.")
         return
-    lines = ["📊 Последние анализы:"]
+    lines = ["📊 История анализов:\n"]
     for a in analyses:
+        dt = fmt_date(a.get("created_at"))
         lines.append(
-            f"#{a['id']} — «{a['query']}», {a['platform'].upper()}, "
-            f"бюджет {a['budget']}, дата {a['created_at']}"
+            f"#{a['id']} — «{a['query']}» | {a['platform'].upper()} | {dt}"
         )
     await update.effective_chat.send_message("\n".join(lines))
+
+
+# ===== ОТСЛЕЖИВАНИЕ НИШ (WATCHLIST) =====
+
+
+async def watchlist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    «👁 Отслеживать нишу» — список отслеживаемых ниш.
+    Бот раз в день проверяет изменения и пришлёт уведомление, если:
+    выручка ±10%+, новый крупный игрок, изменился % выкупа.
+    Кнопки: [➕ Добавить нишу] [➖ Удалить нишу].
+    """
+    if not await ensure_access(update, context):
+        return
+    user_id = update.effective_user.id
+    items = get_watchlist_by_user(user_id)
+    if not items:
+        text = (
+            "👁 Отслеживаемые ниши\n\n"
+            "Список пуст. Добавляйте ниши из результата анализа кнопкой "
+            "«👁 Добавить в отслеживание» под отчётом.\n\n"
+            "Бот раз в день проверяет изменения и пришлёт уведомление, если:\n"
+            "• Выручка ниши выросла/упала на 10%+\n"
+            "• Появился новый крупный игрок\n"
+            "• % выкупа изменился"
+        )
+    else:
+        lines = ["👁 Отслеживаемые ниши:\n"]
+        for w in items:
+            dt = fmt_date(w.get("last_checked"))
+            rev = w.get("last_revenue") or 0
+            lines.append(
+                f"• «{w['query']}» | {w['platform'].upper()} | "
+                f"выручка {rev:,.0f} ₽ | проверка {dt}"
+            )
+        lines.append(
+            "\nБот проверяет раз в день и пришлёт уведомление при изменении выручки ±10%+, "
+            "новом крупном игроке или изменении % выкупа."
+        )
+        text = "\n".join(lines)
+    kb_buttons = [
+        [InlineKeyboardButton("➕ Добавить нишу", callback_data="watchlist_add")],
+        [InlineKeyboardButton("➖ Удалить нишу", callback_data="watchlist_remove")],
+    ]
+    await update.effective_chat.send_message(
+        text, reply_markup=InlineKeyboardMarkup(kb_buttons)
+    )
+
+
+async def watchlist_add_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Подсказка: как добавить нишу в отслеживание."""
+    query = update.callback_query
+    await query.answer()
+    await query.message.reply_text(
+        "Чтобы добавить нишу в отслеживание:\n"
+        "1. Нажмите «🔍 Анализ ниши» и выполните анализ.\n"
+        "2. В отчёте нажмите кнопку «👁 Добавить в отслеживание»."
+    )
+
+
+async def watchlist_remove_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показать список ниш с кнопкой удаления по каждой."""
+    q = update.callback_query
+    await q.answer()
+    user_id = update.effective_user.id
+    items = get_watchlist_by_user(user_id)
+    if not items:
+        await q.message.reply_text("Нет отслеживаемых ниш.")
+        return
+    text = "Выберите нишу для удаления:"
+    buttons = [
+        [InlineKeyboardButton(
+            f"❌ «{w['query']}» {w['platform'].upper()}",
+            callback_data=f"watch_remove:{w['id']}"
+        )]
+        for w in items
+    ]
+    await q.message.reply_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+
+
+async def watch_remove_confirm_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Удаление ниши из watchlist по callback_data watch_remove:id."""
+    q = update.callback_query
+    await q.answer()
+    data = (q.data or "").strip()
+    try:
+        _, sid = data.split(":", 1)
+        watch_id = int(sid)
+    except (ValueError, IndexError):
+        await q.message.reply_text("Ошибка.")
+        return
+    user_id = update.effective_user.id
+    if remove_from_watchlist(watch_id, user_id):
+        await q.message.reply_text("✅ Ниша удалена из отслеживания.")
+    else:
+        await q.message.reply_text("Запись не найдена или уже удалена.")
 
 
 # ===== КАЛЬКУЛЯТОР =====
@@ -1683,7 +1799,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     elif text.startswith("⚙️"):
         await settings_menu(update, context)
     elif text.startswith("👁"):
-        await history_cmd(update, context)
+        await watchlist_cmd(update, context)
     else:
         await update.effective_chat.send_message(
             "Не понял сообщение. Используйте кнопки в меню или команды."
@@ -1803,6 +1919,15 @@ def build_application() -> Application:
     )
     app.add_handler(china_conv)
     app.add_handler(CallbackQueryHandler(watch_add_callback, pattern=r"^watch_add:"))
+    app.add_handler(
+        CallbackQueryHandler(watchlist_add_callback, pattern=r"^watchlist_add$")
+    )
+    app.add_handler(
+        CallbackQueryHandler(watchlist_remove_callback, pattern=r"^watchlist_remove$")
+    )
+    app.add_handler(
+        CallbackQueryHandler(watch_remove_confirm_callback, pattern=r"^watch_remove:")
+    )
     # Меню «Сотрудники»: только список и кнопки menu_staff / staff_back (НЕ staff_add, staff_remove — те в staff_conv)
     app.add_handler(
         CallbackQueryHandler(

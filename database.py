@@ -493,6 +493,34 @@ def get_watchlist() -> List[Dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+def get_watchlist_by_user(user_id: int) -> List[Dict[str, Any]]:
+    """
+    Возвращает записи отслеживания ниш для одного пользователя.
+    """
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT * FROM watchlist WHERE user_id = ? ORDER BY id DESC",
+            (user_id,),
+        )
+        rows = cur.fetchall()
+    return [dict(r) for r in rows]
+
+
+def remove_from_watchlist(watch_id: int, user_id: int) -> bool:
+    """
+    Удаляет запись из watchlist по id. Только если запись принадлежит user_id.
+    Возвращает True если удалено.
+    """
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "DELETE FROM watchlist WHERE id = ? AND user_id = ?",
+            (watch_id, user_id),
+        )
+        return cur.rowcount > 0
+
+
 def update_watchlist_revenue(
     watch_id: int, new_revenue: float
 ) -> None:
@@ -569,6 +597,8 @@ __all__ = [
     "get_analysis_by_id",
     "add_to_watchlist",
     "get_watchlist",
+    "get_watchlist_by_user",
+    "remove_from_watchlist",
     "update_watchlist_revenue",
     "get_cached_currency",
     "set_cached_currency",
