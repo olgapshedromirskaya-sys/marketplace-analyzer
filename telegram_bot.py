@@ -1739,16 +1739,19 @@ async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     mpstats_ok = get_mpstats_token(user_id) is not None
     yandex_ok = get_yandex_token(user_id) is not None
     text = (
-        "⚙️ Настройки:\n"
-        f"- MPStats токен: {'✅' if mpstats_ok else '❌'}\n"
-        f"- Яндекс.Директ токен: {'✅' if yandex_ok else '❌'} (необязательно)\n"
-        "- Google Trends: ✅ (всегда активен)\n\n"
-        "- История анализов: /history\n"
-        "- Ваш Telegram ID: /myid\n"
+        "⚙️ Настройки:\n\n"
+        "🔑 Токены API:\n"
+        f"- MPStats: {'✅ активен' if mpstats_ok else '❌ не задан'}\n"
+        f"- Яндекс.Директ: {'✅ активен' if yandex_ok else '❌ не задан'} (необязательно)\n"
+        "- Google Trends: ✅ всегда активен (бесплатно)\n\n"
+        "📊 Источники данных:\n"
+        "- Чем больше токенов — тем точнее анализ\n"
     )
     kb_buttons = [
-        [InlineKeyboardButton("🔑 Установить MPStats токен", callback_data="set_token")],
+        [InlineKeyboardButton("🔑 Добавить MPStats токен", callback_data="set_token")],
         [InlineKeyboardButton("🔑 Добавить Яндекс токен", callback_data="set_yandex")],
+        [InlineKeyboardButton("📊 История анализов", callback_data="menu_history")],
+        [InlineKeyboardButton("🆔 Мой Telegram ID", callback_data="menu_myid")],
     ]
     if is_owner(user_id):
         kb_buttons.append([InlineKeyboardButton("👥 Сотрудники", callback_data="menu_staff")])
@@ -1870,20 +1873,29 @@ async def staff_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         mpstats_ok = get_mpstats_token(uid) is not None
         yandex_ok = get_yandex_token(uid) is not None
         text = (
-            "⚙️ Настройки:\n"
-            f"- MPStats токен: {'✅' if mpstats_ok else '❌'}\n"
-            f"- Яндекс.Директ токен: {'✅' if yandex_ok else '❌'} (необязательно)\n"
-            "- Google Trends: ✅ (всегда активен)\n\n"
-            "- История анализов: /history\n"
-            "- Ваш Telegram ID: /myid\n"
+            "⚙️ Настройки:\n\n"
+            "🔑 Токены API:\n"
+            f"- MPStats: {'✅ активен' if mpstats_ok else '❌ не задан'}\n"
+            f"- Яндекс.Директ: {'✅ активен' if yandex_ok else '❌ не задан'} (необязательно)\n"
+            "- Google Trends: ✅ всегда активен (бесплатно)\n\n"
+            "📊 Источники данных:\n"
+            "- Чем больше токенов — тем точнее анализ\n"
         )
         kb_buttons = [
-            [InlineKeyboardButton("🔑 Установить MPStats токен", callback_data="set_token")],
+            [InlineKeyboardButton("🔑 Добавить MPStats токен", callback_data="set_token")],
             [InlineKeyboardButton("🔑 Добавить Яндекс токен", callback_data="set_yandex")],
+            [InlineKeyboardButton("📊 История анализов", callback_data="menu_history")],
+            [InlineKeyboardButton("🆔 Мой Telegram ID", callback_data="menu_myid")],
         ]
         if is_owner(uid):
             kb_buttons.append([InlineKeyboardButton("👥 Сотрудники", callback_data="menu_staff")])
         await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup(kb_buttons))
+    elif data == "menu_history":
+        await query.answer()
+        await history_cmd(update, context)
+    elif data == "menu_myid":
+        await query.answer()
+        await query.message.reply_text(f"🆔 Ваш Telegram ID: {update.effective_user.id}")
 
 
 # ===== РОУТЕР КНОПОК =====
@@ -1922,6 +1934,7 @@ def build_application() -> Application:
     )
     app = ApplicationBuilder().token(settings.telegram_token).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("settings", settings_menu))
     app.add_handler(CommandHandler("myid", myid))
     app.add_handler(CommandHandler("adduser", adduser_cmd))
     app.add_handler(CommandHandler("removeuser", removeuser_cmd))
@@ -2050,7 +2063,7 @@ def build_application() -> Application:
     app.add_handler(
         CallbackQueryHandler(
             staff_menu_callback,
-            pattern=r"^(menu_staff|staff_back|staff_list)$",
+            pattern=r"^(menu_staff|staff_back|staff_list|menu_history|menu_myid)$",
         )
     )
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))

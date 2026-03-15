@@ -605,13 +605,32 @@
       <!-- ВКЛАДКА: НАСТРОЙКИ -->
       <div id="tab-settings" class="hidden">
         <div class="card">
-          <div class="section-title">Настройки</div>
+          <div class="section-title">⚙️ Настройки</div>
+
+          <div class="section-title" style="margin-top: 12px; margin-bottom: 6px;">🔑 Токены API</div>
 
           <div style="margin-bottom: 10px">
             <label>MPStats токен</label>
-            <input id="s-token" type="password" placeholder="Вставьте токен" />
+            <input id="s-token" type="password" placeholder="Вставьте MPStats токен" />
+            <button type="button" class="btn" id="btn-save-mpstats" style="margin-top: 6px">Сохранить</button>
             <div class="muted" id="s-token-status" style="margin-top: 6px"></div>
           </div>
+
+          <div style="margin-bottom: 10px">
+            <label>Яндекс.Директ токен (необязательно)</label>
+            <input id="s-yandex-token" type="password" placeholder="Вставьте токен Яндекс.Директ" />
+            <button type="button" class="btn" id="btn-save-yandex" style="margin-top: 6px">Сохранить</button>
+            <div class="muted" id="s-yandex-status" style="margin-top: 6px"></div>
+          </div>
+
+          <div class="muted" style="margin: 10px 0">
+            Google Trends: ✅ Подключён (всегда, бесплатно)
+          </div>
+
+          <div class="section-title" style="margin-top: 14px; margin-bottom: 6px;">📊 Источники данных</div>
+          <div id="s-sources-status" class="muted" style="margin-bottom: 12px">Загрузка...</div>
+
+          <hr style="border: none; border-top: 1px solid var(--border); margin: 14px 0;" />
 
           <div class="row">
             <div style="flex: 1 1 180px">
@@ -625,7 +644,7 @@
           </div>
 
           <button class="primary" id="btn-save-settings" style="margin-top: 12px">
-            Сохранить
+            Сохранить пороги (маржа / ROI)
           </button>
           <div class="muted" id="s-status" style="margin-top: 8px"></div>
         </div>
@@ -667,6 +686,7 @@
           if (listEl) listEl.classList.add("hidden");
         }
         if (name === "watchlist") renderWatchlist();
+        if (name === "settings") refreshSettingsSources();
       }
 
       tabs.forEach((t) =>
@@ -693,38 +713,89 @@
       const settings = loadSettings();
 
       const sToken = document.getElementById("s-token");
+      const sYandexToken = document.getElementById("s-yandex-token");
       const sMinMargin = document.getElementById("s-min-margin");
       const sMinRoi = document.getElementById("s-min-roi");
       const sStatus = document.getElementById("s-status");
       const sTokenStatus = document.getElementById("s-token-status");
+      const sYandexStatus = document.getElementById("s-yandex-status");
+      const sSourcesStatus = document.getElementById("s-sources-status");
 
       sMinMargin.value = settings.minMargin ?? 20;
       sMinRoi.value = settings.minRoi ?? 50;
 
+      async function refreshSettingsSources() {
+        if (!sSourcesStatus) return;
+        if (!USER_ID) {
+          sSourcesStatus.textContent = "Google Trends ✅ | MPStats — | Яндекс — (войдите через Telegram WebApp для токенов)";
+          return;
+        }
+        try {
+          const resp = await fetch(`/api/settings?user_id=${USER_ID}`);
+          const data = resp.ok ? await resp.json() : {};
+          const mp = data.mpstats_set ? "✅" : "❌";
+          const ya = data.yandex_set ? "✅" : "❌";
+          sSourcesStatus.textContent = `Google Trends ✅ | MPStats ${mp} | Яндекс ${ya}`;
+        } catch {
+          sSourcesStatus.textContent = "Google Trends ✅ | MPStats ? | Яндекс ?";
+        }
+      }
+
+      document.getElementById("btn-save-mpstats").addEventListener("click", async () => {
+        const token = sToken.value.trim();
+        if (!token) {
+          sTokenStatus.textContent = "Введите токен.";
+          return;
+        }
+        if (!USER_ID) {
+          sTokenStatus.textContent = "Сохранить можно только из Telegram WebApp.";
+          return;
+        }
+        sTokenStatus.textContent = "Сохраняю...";
+        try {
+          const resp = await fetch("/api/settings/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: USER_ID, token }),
+          });
+          if (!resp.ok) throw new Error("save failed");
+          sTokenStatus.textContent = "✅ MPStats токен сохранён.";
+          refreshSettingsSources();
+        } catch {
+          sTokenStatus.textContent = "Не удалось сохранить.";
+        }
+      });
+
+      document.getElementById("btn-save-yandex").addEventListener("click", async () => {
+        const token = sYandexToken.value.trim();
+        if (!token) {
+          sYandexStatus.textContent = "Введите токен.";
+          return;
+        }
+        if (!USER_ID) {
+          sYandexStatus.textContent = "Сохранить можно только из Telegram WebApp.";
+          return;
+        }
+        sYandexStatus.textContent = "Сохраняю...";
+        try {
+          const resp = await fetch("/api/settings/yandex", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: USER_ID, token }),
+          });
+          if (!resp.ok) throw new Error("save failed");
+          sYandexStatus.textContent = "✅ Токен Яндекс.Директ сохранён.";
+          refreshSettingsSources();
+        } catch {
+          sYandexStatus.textContent = "Не удалось сохранить.";
+        }
+      });
+
       document.getElementById("btn-save-settings").addEventListener("click", async () => {
         const minMargin = parseFloat(sMinMargin.value || "20");
         const minRoi = parseFloat(sMinRoi.value || "50");
-        const token = sToken.value.trim();
         saveSettings({ minMargin, minRoi });
-        sStatus.textContent = "✅ Настройки сохранены.";
-
-        // Сохраняем токен на сервер (если открыто в Telegram и есть user_id)
-        if (USER_ID && token) {
-          sTokenStatus.textContent = "Сохраняю токен...";
-          try {
-            const resp = await fetch("/api/settings/token", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ user_id: USER_ID, token }),
-            });
-            if (!resp.ok) throw new Error("token save failed");
-            sTokenStatus.textContent = "✅ Токен сохранён на сервере.";
-          } catch {
-            sTokenStatus.textContent = "Не удалось сохранить токен на сервере.";
-          }
-        } else if (!USER_ID && token) {
-          sTokenStatus.textContent = "Токен введён, но сохранение доступно только из Telegram WebApp.";
-        }
+        sStatus.textContent = "✅ Пороги сохранены.";
       });
 
       // Autopодбор

@@ -12,6 +12,9 @@ from database import (
     save_analysis,
     get_latest_analyses,
     set_mpstats_token,
+    get_mpstats_token,
+    set_yandex_token,
+    get_yandex_token,
 )
 from mpstats import MPStatsClient, NicheParams
 from calculator import CalcInput, calculate_unit_economics
@@ -267,6 +270,17 @@ def api_history(user_id: int) -> List[Dict[str, Any]]:
     return get_latest_analyses(user_id=user_id, limit=5)
 
 
+@app.get("/api/settings")
+def api_get_settings(user_id: int = Query(..., description="Telegram user id")) -> Dict[str, Any]:
+    """
+    Статус токенов для WebApp (без самих токенов).
+    """
+    return {
+        "mpstats_set": get_mpstats_token(user_id) is not None,
+        "yandex_set": get_yandex_token(user_id) is not None,
+    }
+
+
 @app.post("/api/settings/token")
 def api_set_token(req: TokenRequest) -> Dict[str, str]:
     """
@@ -275,6 +289,17 @@ def api_set_token(req: TokenRequest) -> Dict[str, str]:
     if not req.token.strip():
         raise HTTPException(status_code=400, detail="Токен не может быть пустым")
     set_mpstats_token(req.user_id, req.token.strip())
+    return {"status": "ok"}
+
+
+@app.post("/api/settings/yandex")
+def api_set_yandex_token(req: TokenRequest) -> Dict[str, str]:
+    """
+    Установка токена Яндекс.Директ через WebApp.
+    """
+    if not req.token.strip():
+        raise HTTPException(status_code=400, detail="Токен не может быть пустым")
+    set_yandex_token(req.user_id, req.token.strip())
     return {"status": "ok"}
 
 
