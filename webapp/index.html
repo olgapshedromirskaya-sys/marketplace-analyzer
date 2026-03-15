@@ -303,6 +303,79 @@
         background: rgba(248, 81, 73, 0.16);
         color: var(--red);
       }
+
+      .trend-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+      }
+
+      .trend-card .trend-header {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+
+      .trend-card .trend-title {
+        font-size: 15px;
+        font-weight: 700;
+        margin: 0 0 8px;
+      }
+
+      .trend-card .trend-row {
+        font-size: 13px;
+        margin: 4px 0;
+      }
+
+      .trend-card .trend-cta {
+        color: var(--green);
+        font-weight: 600;
+        margin: 6px 0;
+      }
+
+      .trend-card .btn-find-product {
+        margin-top: 10px;
+        width: 100%;
+        padding: 8px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: rgba(63, 185, 80, 0.12);
+        color: var(--green);
+        cursor: pointer;
+        font-size: 13px;
+      }
+
+      .watchlist-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 10px;
+      }
+
+      .watchlist-card .wl-name {
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .watchlist-card .wl-meta {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+
+      .watchlist-card .wl-status {
+        font-size: 11px;
+        margin-top: 4px;
+      }
+
+      .wl-status.ok { color: var(--green); }
+      .wl-status.warn { color: var(--yellow); }
+      .wl-status.err { color: var(--red); }
     </style>
   </head>
   <body>
@@ -314,6 +387,9 @@
 
       <div class="tabs">
         <div class="tab active" data-tab="pick">🎯 Подбор</div>
+        <div class="tab" data-tab="trends">📈 Тренды</div>
+        <div class="tab" data-tab="analyze">🔍 Анализ</div>
+        <div class="tab" data-tab="watchlist">👁 Watchlist</div>
         <div class="tab" data-tab="calc">💰 Калькулятор</div>
         <div class="tab" data-tab="settings">⚙️ Настройки</div>
       </div>
@@ -385,6 +461,46 @@
         </div>
 
         <div id="results" class="grid"></div>
+      </div>
+
+      <!-- ВКЛАДКА: ТРЕНДЫ -->
+      <div id="tab-trends" class="hidden">
+        <div class="section-title">🔥 Трендовые ниши</div>
+        <div id="trends-list"></div>
+      </div>
+
+      <!-- ВКЛАДКА: АНАЛИЗ НИШИ -->
+      <div id="tab-analyze" class="hidden">
+        <div class="card">
+          <div class="section-title">🔍 Анализ ниши</div>
+          <div style="margin-bottom: 10px">
+            <label>Ключевое слово или категория</label>
+            <input id="analyze-query" type="text" placeholder="Например: массажные пистолеты" />
+          </div>
+          <div style="margin-bottom: 10px">
+            <label>Период</label>
+            <div class="platform-btns" id="analyze-period-btns">
+              <button class="pillbtn active" data-period="1">1 мес</button>
+              <button class="pillbtn" data-period="3">3 мес</button>
+              <button class="pillbtn" data-period="6">6 мес</button>
+            </div>
+          </div>
+          <button class="primary" id="btn-analyze">🔍 Анализировать</button>
+          <div class="muted" id="analyze-status" style="margin-top: 8px"></div>
+        </div>
+        <div id="analyze-result" class="card hidden" style="margin-top: 14px;"></div>
+      </div>
+
+      <!-- ВКЛАДКА: WATCHLIST -->
+      <div id="tab-watchlist" class="hidden">
+        <div class="card">
+          <div class="section-title">👁 Отслеживаемые ниши</div>
+          <p class="muted" style="margin: 0 0 10px">
+            Бот раз в день проверяет изменения и пришлёт уведомление при изменении выручки ±10%+, новом крупном игроке или изменении % выкупа.
+          </p>
+          <button class="primary" id="btn-watchlist-add">➕ Добавить нишу</button>
+        </div>
+        <div id="watchlist-list" style="margin-top: 14px;"></div>
       </div>
 
       <!-- ВКЛАДКА: КАЛЬКУЛЯТОР -->
@@ -491,15 +607,24 @@
       // UI: tabs
       const tabs = document.querySelectorAll(".tab");
       const tabPick = document.getElementById("tab-pick");
+      const tabTrends = document.getElementById("tab-trends");
+      const tabAnalyze = document.getElementById("tab-analyze");
+      const tabWatchlist = document.getElementById("tab-watchlist");
       const tabCalc = document.getElementById("tab-calc");
       const tabSettings = document.getElementById("tab-settings");
 
       function showTab(name) {
         tabs.forEach((t) => t.classList.remove("active"));
-        document.querySelector(`.tab[data-tab=\"${name}\"]`).classList.add("active");
+        const sel = document.querySelector(`.tab[data-tab="${name}"]`);
+        if (sel) sel.classList.add("active");
         tabPick.classList.toggle("hidden", name !== "pick");
+        tabTrends.classList.toggle("hidden", name !== "trends");
+        tabAnalyze.classList.toggle("hidden", name !== "analyze");
+        tabWatchlist.classList.toggle("hidden", name !== "watchlist");
         tabCalc.classList.toggle("hidden", name !== "calc");
         tabSettings.classList.toggle("hidden", name !== "settings");
+        if (name === "trends") renderTrends();
+        if (name === "watchlist") renderWatchlist();
       }
 
       tabs.forEach((t) =>
@@ -621,6 +746,22 @@
       function fmtMoney(n) {
         if (n == null || isNaN(n)) return "—";
         return Math.round(n).toLocaleString("ru-RU");
+      }
+
+      function fmtDate(str) {
+        if (!str) return "—";
+        try {
+          const d = new Date(str.replace("Z", "+00:00"));
+          if (isNaN(d.getTime())) return str;
+          const day = String(d.getDate()).padStart(2, "0");
+          const month = String(d.getMonth() + 1).padStart(2, "0");
+          const year = d.getFullYear();
+          const h = String(d.getHours()).padStart(2, "0");
+          const m = String(d.getMinutes()).padStart(2, "0");
+          return `${day}.${month}.${year} ${h}:${m}`;
+        } catch (_) {
+          return str;
+        }
       }
 
       // Расчёт юнит-экономики для карточки (та же логика, что в модалке)
@@ -928,6 +1069,152 @@
       }
 
       btnFind.addEventListener("click", findProducts);
+
+      // ===== ТРЕНДЫ =====
+      const DEMO_TRENDS = [
+        { id: 1, title: "Массажные пистолеты", growth: 280, months: 6, cta: "ВХОДИТЬ СЕЙЧАС", revenue: 24500000, sellers: 28, sellersLabel: "мало", potential: "ВЫСОКИЙ" },
+        { id: 2, title: "Термосы 500 мл", growth: 145, months: 6, cta: "ВХОДИТЬ СЕЙЧАС", revenue: 42000000, sellers: 120, sellersLabel: "средне", potential: "ВЫСОКИЙ" },
+        { id: 3, title: "Органайзеры для кабелей", growth: 98, months: 6, cta: "СЛЕДИТЬ", revenue: 15000000, sellers: 80, sellersLabel: "средне", potential: "СРЕДНИЙ" },
+        { id: 4, title: "Силиконовые формы для кексов", growth: 62, months: 6, cta: "СЛЕДИТЬ", revenue: 28000000, sellers: 95, sellersLabel: "средне", potential: "СРЕДНИЙ" },
+        { id: 5, title: "Чехлы для AirPods Pro", growth: 38, months: 6, cta: "ОСТОРОЖНО", revenue: 18000000, sellers: 150, sellersLabel: "много", potential: "НИЗКИЙ" },
+      ];
+
+      function renderTrends() {
+        const container = document.getElementById("trends-list");
+        if (!container) return;
+        container.innerHTML = DEMO_TRENDS.map((t, i) => `
+          <div class="trend-card">
+            <div class="trend-header">🔥 ТРЕНД #${i + 1}</div>
+            <div class="trend-title">${t.title}</div>
+            <div class="trend-row">📈 Рост: +${t.growth}% за ${t.months} мес</div>
+            <div class="trend-cta">🚀 ${t.cta}</div>
+            <div class="trend-row">💰 Выручка: ${fmtMoney(t.revenue)}₽</div>
+            <div class="trend-row">👥 Продавцов: ${t.sellers} (${t.sellersLabel})</div>
+            <div class="trend-row">⭐ Потенциал: ${t.potential}</div>
+            <button type="button" class="btn-find-product" data-trend-query="${t.title.replace(/"/g, "&quot;")}">🎯 Найти товар</button>
+          </div>
+        `).join("");
+        container.querySelectorAll(".btn-find-product").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            showTab("pick");
+            pickBudget.focus();
+          });
+        });
+      }
+
+      // ===== АНАЛИЗ НИШИ =====
+      let analyzePeriod = 1;
+      document.querySelectorAll("#analyze-period-btns .pillbtn").forEach((b) => {
+        b.addEventListener("click", () => {
+          document.querySelectorAll("#analyze-period-btns .pillbtn").forEach((x) => x.classList.remove("active"));
+          b.classList.add("active");
+          analyzePeriod = parseInt(b.dataset.period || "1", 10);
+        });
+      });
+
+      const analyzeQuery = document.getElementById("analyze-query");
+      const analyzeStatus = document.getElementById("analyze-status");
+      const analyzeResult = document.getElementById("analyze-result");
+
+      document.getElementById("btn-analyze").addEventListener("click", async () => {
+        const query = analyzeQuery.value.trim();
+        if (!query) {
+          analyzeStatus.textContent = "Введите ключевое слово или категорию.";
+          return;
+        }
+        analyzeStatus.textContent = "Анализирую...";
+        analyzeResult.classList.add("hidden");
+        try {
+          const resp = await fetch(`/api/analyze-niche?query=${encodeURIComponent(query)}&period=${analyzePeriod}`);
+          let data = null;
+          if (resp.ok) data = await resp.json();
+          if (!data) {
+            data = {
+              revenue: 24500000,
+              sellers: 28,
+              buyout_percent: 72,
+              trend: "growth",
+              competitors: [
+                { name: "Массажный пистолет Xiaomi Youpin Pro 5 режимов", revenue: 4200000 },
+                { name: "Массажный пистолет Bradex K 052", revenue: 3100000 },
+                { name: "Массажный пистолет Welbu 9 режимов", revenue: 2800000 },
+                { name: "Массажный пистолет Zepter Massage Gun", revenue: 2100000 },
+                { name: "Массажный пистолет Medcursor MC-01", revenue: 1900000 },
+              ],
+            };
+            analyzeStatus.textContent = "Демо-результат (API недоступен).";
+          } else {
+            analyzeStatus.textContent = "";
+          }
+          const trendText = data.trend === "growth" ? "▲ Рост" : data.trend === "fall" ? "▼ Падение" : "→ Стабильно";
+          const compsHtml = (data.competitors || []).slice(0, 5).map((c, i) =>
+            `<div style="margin:6px 0">${i + 1}. ${c.name || "—"}${c.revenue ? ` · ${fmtMoney(c.revenue)} ₽` : ""}</div>`
+          ).join("");
+          analyzeResult.innerHTML = `
+            <div class="section-title">Результат: «${query.replace(/</g, "&lt;")}»</div>
+            <div class="kv">
+              <div>💰 Выручка ниши: ${fmtMoney(data.revenue)} ₽</div>
+              <div>👥 Продавцов: ${data.sellers ?? "—"}</div>
+              <div>🔄 % выкупа: ${data.buyout_percent ?? "—"}%</div>
+              <div>📈 Тренд: ${trendText}</div>
+            </div>
+            <h3 class="section-title" style="margin-top:12px">Топ-5 конкурентов</h3>
+            <div>${compsHtml || "<div class=\"muted\">Нет данных.</div>"}</div>
+          `;
+          analyzeResult.classList.remove("hidden");
+        } catch (e) {
+          analyzeStatus.textContent = "Ошибка запроса. Показан демо-результат.";
+          analyzeResult.classList.remove("hidden");
+        }
+      });
+
+      // ===== WATCHLIST =====
+      let watchlistItems = [];
+
+      function renderWatchlist() {
+        const container = document.getElementById("watchlist-list");
+        if (!container) return;
+        if (!watchlistItems.length) {
+          container.innerHTML = "<div class=\"muted\">Нет отслеживаемых ниш. Нажмите «➕ Добавить нишу» или добавьте нишу из результата анализа в боте.</div>";
+          return;
+        }
+        container.innerHTML = watchlistItems.map((w) => `
+          <div class="watchlist-card">
+            <div class="wl-name">«${(w.query || "").replace(/</g, "&lt;")}» · ${(w.platform || "WB").toUpperCase()}</div>
+            <div class="wl-meta">Последнее изменение: ${w.last_checked || fmtDate(w.last_checked_at) || "—"}</div>
+            <div class="wl-status ${w.status_class || "ok"}">Статус: ${w.status_text || "Отслеживается"}</div>
+          </div>
+        `).join("");
+      }
+
+      document.getElementById("btn-watchlist-add").addEventListener("click", () => {
+        showTab("analyze");
+        analyzeQuery.focus();
+      });
+
+      // Загрузка watchlist с сервера (если есть API)
+      async function loadWatchlist() {
+        if (!USER_ID) return;
+        try {
+          const resp = await fetch(`/api/watchlist?user_id=${USER_ID}`);
+          if (resp.ok) {
+            const data = await resp.json();
+            watchlistItems = data.items || data || [];
+            if (Array.isArray(watchlistItems)) {
+              watchlistItems.forEach((w) => {
+                const raw = w.last_checked || w.last_checked_at;
+                w.last_checked = raw ? fmtDate(raw) : "—";
+                w.status_text = w.status_text || "Отслеживается";
+                w.status_class = "ok";
+              });
+            }
+          }
+        } catch (_) {}
+        if (document.getElementById("tab-watchlist") && !document.getElementById("tab-watchlist").classList.contains("hidden")) {
+          renderWatchlist();
+        }
+      }
+      loadWatchlist();
 
       // Calculator (client-side, same constants/formula as Telegram simplified)
       document.getElementById("btn-calc").addEventListener("click", () => {
