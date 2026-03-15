@@ -400,6 +400,11 @@
           <div class="section-title">Найти прибыльный товар</div>
 
           <div style="margin-bottom: 10px">
+            <label>Ниша или категория (необязательно)</label>
+            <input id="pick-query" type="text" placeholder="Например: массажные пистолеты" />
+          </div>
+
+          <div style="margin-bottom: 10px">
             <label>Ваш бюджет, ₽</label>
             <input id="pick-budget" type="number" placeholder="Например: 100000" />
           </div>
@@ -961,8 +966,11 @@
           return;
         }
 
+        const nicheQuery = (document.getElementById("pick-query") && document.getElementById("pick-query").value) || "";
         btnFind.disabled = true;
-        pickStatus.textContent = "Ищу товары...";
+        pickStatus.textContent = nicheQuery
+          ? `Ищем товары в нише: ${nicheQuery}...`
+          : "Ищу товары...";
         results.innerHTML = "";
 
         try {
@@ -1121,10 +1129,15 @@
             <button type="button" class="btn-find-product" data-trend-query="${t.title.replace(/"/g, "&quot;")}">🎯 Найти товар</button>
           </div>
         `).join("");
+        const pickQueryInput = document.getElementById("pick-query");
         container.querySelectorAll(".btn-find-product").forEach((btn) => {
           btn.addEventListener("click", () => {
+            const trendTitle = (btn.dataset.trendQuery || "").replace(/&quot;/g, '"');
             showTab("pick");
-            pickBudget.focus();
+            if (pickQueryInput) pickQueryInput.value = trendTitle;
+            if (pickStatus) pickStatus.textContent = trendTitle ? `Ищем товары в нише: ${trendTitle}...` : "";
+            if (!pickBudget.value || parseFloat(pickBudget.value) <= 0) pickBudget.value = "100000";
+            findProducts();
           });
         });
       }
