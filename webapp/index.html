@@ -488,6 +488,10 @@
               <button class="pillbtn" data-period="6">6 мес</button>
             </div>
           </div>
+          <div style="margin-bottom: 10px">
+            <label>Категория</label>
+            <input id="trends-category" type="text" placeholder="Например: электроника, спорт... (необязательно)" />
+          </div>
           <button class="primary" id="btn-find-trends">📈 Найти тренды</button>
         </div>
         <div id="trends-list" class="hidden" style="margin-top: 14px;"></div>
@@ -1131,11 +1135,11 @@
 
       // ===== ТРЕНДЫ =====
       const DEMO_TRENDS = [
-        { id: 1, title: "Массажные пистолеты", growth: 280, months: 6, cta: "ВХОДИТЬ СЕЙЧАС", revenue: 24500000, sellers: 28, sellersLabel: "мало", potential: "ВЫСОКИЙ" },
-        { id: 2, title: "Термосы 500 мл", growth: 145, months: 6, cta: "ВХОДИТЬ СЕЙЧАС", revenue: 42000000, sellers: 120, sellersLabel: "средне", potential: "ВЫСОКИЙ" },
-        { id: 3, title: "Органайзеры для кабелей", growth: 98, months: 6, cta: "СЛЕДИТЬ", revenue: 15000000, sellers: 80, sellersLabel: "средне", potential: "СРЕДНИЙ" },
-        { id: 4, title: "Силиконовые формы для кексов", growth: 62, months: 6, cta: "СЛЕДИТЬ", revenue: 28000000, sellers: 95, sellersLabel: "средне", potential: "СРЕДНИЙ" },
-        { id: 5, title: "Чехлы для AirPods Pro", growth: 38, months: 6, cta: "ОСТОРОЖНО", revenue: 18000000, sellers: 150, sellersLabel: "много", potential: "НИЗКИЙ" },
+        { id: 1, title: "Массажные пистолеты", growth: 280, months: 6, cta: "ВХОДИТЬ СЕЙЧАС", revenue: 24500000, sellers: 28, sellersLabel: "мало", potential: "ВЫСОКИЙ", category: "спорт" },
+        { id: 2, title: "Термосы 500 мл", growth: 145, months: 6, cta: "ВХОДИТЬ СЕЙЧАС", revenue: 42000000, sellers: 120, sellersLabel: "средне", potential: "ВЫСОКИЙ", category: "товары для дома" },
+        { id: 3, title: "Органайзеры для кабелей", growth: 98, months: 6, cta: "СЛЕДИТЬ", revenue: 15000000, sellers: 80, sellersLabel: "средне", potential: "СРЕДНИЙ", category: "электроника" },
+        { id: 4, title: "Силиконовые формы для кексов", growth: 62, months: 6, cta: "СЛЕДИТЬ", revenue: 28000000, sellers: 95, sellersLabel: "средне", potential: "СРЕДНИЙ", category: "кухня" },
+        { id: 5, title: "Чехлы для AirPods Pro", growth: 38, months: 6, cta: "ОСТОРОЖНО", revenue: 18000000, sellers: 150, sellersLabel: "много", potential: "НИЗКИЙ", category: "электроника" },
       ];
 
       let currentTrendPlatform = "wb";
@@ -1165,8 +1169,17 @@
 
       function renderTrends() {
         const container = document.getElementById("trends-list");
+        const categoryInput = document.getElementById("trends-category");
+        const categoryQuery = (categoryInput && categoryInput.value.trim()) || "";
+        const trendsToShow = categoryQuery
+          ? DEMO_TRENDS.filter((t) => (t.category || "").toLowerCase().includes(categoryQuery.toLowerCase()) || (t.title || "").toLowerCase().includes(categoryQuery.toLowerCase()))
+          : DEMO_TRENDS.slice(0, 5);
         if (!container) return;
-        container.innerHTML = DEMO_TRENDS.map((t, i) => `
+        if (!trendsToShow.length) {
+          container.innerHTML = `<div class="muted">По категории «${categoryQuery.replace(/</g, "&lt;")}» трендов не найдено. Попробуйте другое слово или оставьте поле пустым для топ-5 по всем нишам.</div>`;
+          return;
+        }
+        container.innerHTML = trendsToShow.map((t, i) => `
           <div class="trend-card">
             <div class="trend-header">🔥 ТРЕНД #${i + 1}</div>
             <div class="trend-title">${t.title}</div>

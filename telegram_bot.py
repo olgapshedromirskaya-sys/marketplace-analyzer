@@ -41,6 +41,8 @@ from database import (
     get_user_id_by_username,
     set_mpstats_token,
     get_mpstats_token,
+    set_yandex_token,
+    get_yandex_token,
     save_analysis,
     get_latest_analyses,
     add_to_watchlist,
@@ -56,6 +58,15 @@ from calculator_handler import build_calculator_conv
 
 
 logger = logging.getLogger(__name__)
+
+
+def format_data_sources(has_mpstats: bool, has_yandex: bool) -> str:
+    """Строка источников данных для трендвотчинга."""
+    return (
+        "📊 Источники: Google Trends ✅ | "
+        f"MPStats {'✅' if has_mpstats else '❌'} | "
+        f"Яндекс {'✅' if has_yandex else '❌'}"
+    )
 
 
 def fmt_date(iso_dt_str: Optional[str]) -> str:
@@ -84,6 +95,10 @@ class AnalyzeStates(IntEnum):
 
 class TokenStates(IntEnum):
     TOKEN = auto()
+
+
+class YandexTokenStates(IntEnum):
+    YANDEX_TOKEN = auto()
 
 
 class CalcStates(IntEnum):
@@ -382,6 +397,8 @@ async def stafflist_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 async def settoken_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if not await ensure_access(update, context):
         return ConversationHandler.END
+    if update.callback_query:
+        await update.callback_query.answer()
     await update.effective_chat.send_message(
         "Пожалуйста, отправьте ваш MPStats API токен одним сообщением."
     )
@@ -399,6 +416,40 @@ async def settoken_save(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
 
 async def settoken_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.effective_chat.send_message("Отменено.")
+    return ConversationHandler.END
+
+
+# ===== ЯНДЕКС.ДИРЕКТ ТОКЕН =====
+
+
+async def setyandex_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Старт ввода токена Яндекс.Директ (кнопка или /setyandex)."""
+    if not await ensure_access(update, context):
+        return ConversationHandler.END
+    if update.callback_query:
+        await update.callback_query.answer()
+        await update.effective_chat.send_message(
+            "Отправьте ваш токен Яндекс.Директ одним сообщением (или /cancel для отмены)."
+        )
+    else:
+        await update.effective_chat.send_message(
+            "Отправьте ваш токен Яндекс.Директ одним сообщением (или /cancel для отмены)."
+        )
+    return YandexTokenStates.YANDEX_TOKEN
+
+
+async def setyandex_save(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    token = (update.message.text or "").strip()
+    if not token:
+        await update.effective_chat.send_message("Токен не может быть пустым. Попробуйте ещё раз или /cancel.")
+        return YandexTokenStates.YANDEX_TOKEN
+    set_yandex_token(update.effective_user.id, token)
+    await update.effective_chat.send_message("✅ Токен Яндекс.Директ сохранён.")
+    return ConversationHandler.END
+
+
+async def setyandex_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.effective_chat.send_message("Отменено.")
     return ConversationHandler.END
 
@@ -528,6 +579,11 @@ async def analyze_period(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         result_json=dumps(result, ensure_ascii=False),
         verdict="",
     )
+    user_id = update.effective_user.id
+    has_mpstats = get_mpstats_token(user_id) is not None
+    has_yandex = get_yandex_token(user_id) is not None
+    lines.append("")
+    lines.append(format_data_sources(has_mpstats, has_yandex))
     kb = InlineKeyboardMarkup(
         [
             [
@@ -1652,7 +1708,8 @@ async def send_autopick_card(
         f"- Прочие (/ед.):            — {other_per_unit:.0f} ₽\n"
         "─────────────────────\n"
         f"ЧИСТАЯ ПРИБЫЛЬ:              {net_profit_per_unit:.0f} ₽/шт\n\n"
-        "⚠️ Расчёт ориентировочный — логистика и хранение зависят от конкретного склада WB.\n"
+        "⚠️ Расчёт ориентировочный — логистика и хранение зависят от конкретного склада WB.\n\n"
+        f"{format_data_sources(has_token, get_yandex_token(update.effective_user.id) is not None)}\n"
         "═══════════════════════"
     ).format(price=sale_price)
 
@@ -1679,15 +1736,20 @@ async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if not await ensure_access(update, context):
         return
     user_id = update.effective_user.id
-    token = get_mpstats_token(user_id)
-    token_status = "✅ задан" if token else "❌ не задан"
+    mpstats_ok = get_mpstats_token(user_id) is not None
+    yandex_ok = get_yandex_token(user_id) is not None
     text = (
         "⚙️ Настройки:\n"
-        f"- MPStats токен: {token_status}\n"
+        f"- MPStats токен: {'✅' if mpstats_ok else '❌'}\n"
+        f"- Яндекс.Директ токен: {'✅' if yandex_ok else '❌'} (необязательно)\n"
+        "- Google Trends: ✅ (всегда активен)\n\n"
         "- История анализов: /history\n"
         "- Ваш Telegram ID: /myid\n"
     )
-    kb_buttons = [[InlineKeyboardButton("🔑 Установить MPStats токен", callback_data="set_token")]]
+    kb_buttons = [
+        [InlineKeyboardButton("🔑 Установить MPStats токен", callback_data="set_token")],
+        [InlineKeyboardButton("🔑 Добавить Яндекс токен", callback_data="set_yandex")],
+    ]
     if is_owner(user_id):
         kb_buttons.append([InlineKeyboardButton("👥 Сотрудники", callback_data="menu_staff")])
     await update.effective_chat.send_message(
@@ -1804,15 +1866,24 @@ async def staff_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         await query.message.reply_text("\n".join(lines), reply_markup=kb)
     elif data == "staff_back":
-        token = get_mpstats_token(update.effective_user.id)
-        token_status = "✅ задан" if token else "❌ не задан"
+        uid = update.effective_user.id
+        mpstats_ok = get_mpstats_token(uid) is not None
+        yandex_ok = get_yandex_token(uid) is not None
         text = (
             "⚙️ Настройки:\n"
-            f"- MPStats токен: {token_status} (команда /settoken)\n"
+            f"- MPStats токен: {'✅' if mpstats_ok else '❌'}\n"
+            f"- Яндекс.Директ токен: {'✅' if yandex_ok else '❌'} (необязательно)\n"
+            "- Google Trends: ✅ (всегда активен)\n\n"
             "- История анализов: /history\n"
             "- Ваш Telegram ID: /myid\n"
         )
-        await query.message.reply_text(text, reply_markup=settings_keyboard_for_owner())
+        kb_buttons = [
+            [InlineKeyboardButton("🔑 Установить MPStats токен", callback_data="set_token")],
+            [InlineKeyboardButton("🔑 Добавить Яндекс токен", callback_data="set_yandex")],
+        ]
+        if is_owner(uid):
+            kb_buttons.append([InlineKeyboardButton("👥 Сотрудники", callback_data="menu_staff")])
+        await query.message.reply_text(text, reply_markup=InlineKeyboardMarkup(kb_buttons))
 
 
 # ===== РОУТЕР КНОПОК =====
@@ -1903,7 +1974,10 @@ def build_application() -> Application:
     )
     app.add_handler(analyze_conv)
     token_conv = ConversationHandler(
-        entry_points=[CommandHandler("settoken", settoken_start)],
+        entry_points=[
+            CommandHandler("settoken", settoken_start),
+            CallbackQueryHandler(settoken_start, pattern=r"^set_token$"),
+        ],
         states={
             TokenStates.TOKEN: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, settoken_save)
@@ -1912,6 +1986,19 @@ def build_application() -> Application:
         fallbacks=[CommandHandler("cancel", settoken_cancel)],
     )
     app.add_handler(token_conv)
+    yandex_conv = ConversationHandler(
+        entry_points=[
+            CommandHandler("setyandex", setyandex_start),
+            CallbackQueryHandler(setyandex_start, pattern=r"^set_yandex$"),
+        ],
+        states={
+            YandexTokenStates.YANDEX_TOKEN: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, setyandex_save)
+            ]
+        },
+        fallbacks=[CommandHandler("cancel", setyandex_cancel)],
+    )
+    app.add_handler(yandex_conv)
     app.add_handler(build_calculator_conv())
 
     # Автоподбор товара

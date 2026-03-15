@@ -47,11 +47,17 @@ def _init_db_core() -> None:
                 user_id INTEGER PRIMARY KEY,
                 username TEXT,
                 mpstats_token TEXT,
+                yandex_token TEXT,
                 is_active INTEGER DEFAULT 0,
                 added_at TEXT
             )
             """
         )
+        # Миграция: добавить yandex_token в существующие БД
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN yandex_token TEXT")
+        except sqlite3.OperationalError:
+            pass  # колонка уже есть
 
         # Таблица анализов ниш
         cur.execute(
@@ -388,6 +394,44 @@ def get_mpstats_token(user_id: int) -> Optional[str]:
     return row["mpstats_token"] if row and row["mpstats_token"] else None
 
 
+def set_yandex_token(user_id: int, token: str) -> None:
+    """
+    Сохраняет токен Яндекс.Директ для пользователя (необязательно).
+    """
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO users (user_id, yandex_token, is_active, added_at)
+            VALUES (?, ?, 1, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                yandex_token = excluded.yandex_token,
+                is_active    = 1
+            """,
+            (user_id, token, datetime.utcnow().isoformat()),
+        )
+
+
+def get_yandex_token(user_id: int) -> Optional[str]:
+    """
+    Возвращает токен Яндекс.Директ пользователя или None.
+    """
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT yandex_token FROM users WHERE user_id = ?",
+            (user_id,),
+        )
+        row = cur.fetchone()
+    if not row:
+        return None
+    try:
+        val = row["yandex_token"]
+        return val if val else None
+    except (KeyError, IndexError):
+        return None
+
+
 # ===== АНАЛИЗЫ НИШ =====
 
 
@@ -592,6 +636,8 @@ __all__ = [
     "get_user_id_by_username",
     "set_mpstats_token",
     "get_mpstats_token",
+    "set_yandex_token",
+    "get_yandex_token",
     "save_analysis",
     "get_latest_analyses",
     "get_analysis_by_id",
