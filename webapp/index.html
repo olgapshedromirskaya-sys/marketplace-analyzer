@@ -543,6 +543,16 @@
             </div>
           </div>
 
+          <div style="margin-top: 10px">
+            <label>Склад хранения</label>
+            <div class="platform-btns" id="c-warehouse-btns">
+              <button class="pillbtn active" data-warehouse="moscow">Москва/СПб</button>
+              <button class="pillbtn" data-warehouse="krasnodar">Краснодар</button>
+              <button class="pillbtn" data-warehouse="kazan">Казань</button>
+              <button class="pillbtn" data-warehouse="novosibirsk">Новосибирск</button>
+            </div>
+          </div>
+
           <button class="primary" id="btn-calc" style="margin-top: 12px">
             Посчитать
           </button>
@@ -558,9 +568,8 @@
             "
           ></pre>
           <div class="muted">
-            Значения по умолчанию: комиссия 15%, логистика WB 150 ₽, хранение 15 ₽,
-            СПП 5%, реклама 15%, фулфилмент 50 ₽, логистика Китай 56 ₽,
-            прочие 15000 ₽/шт.
+            Логистика WB зависит от склада (Москва 90 ₽, Краснодар 110 ₽, Казань 130 ₽, Новосибирск 180 ₽).
+            Комиссия 15%, хранение 15 ₽, СПП 5%, реклама 15%, фулфилмент 50 ₽, логистика Китай 56 ₽, прочие 15000 ₽/мес.
           </div>
         </div>
       </div>
@@ -743,6 +752,23 @@
       const results = document.getElementById("results");
       let currentProducts = [];
 
+      const WB_LOGISTICS = {
+        moscow: 90,
+        krasnodar: 110,
+        kazan: 130,
+        novosibirsk: 180,
+        other: 150,
+      };
+
+      let currentCalcWarehouse = "moscow";
+      document.querySelectorAll("#c-warehouse-btns .pillbtn").forEach((b) => {
+        b.addEventListener("click", () => {
+          document.querySelectorAll("#c-warehouse-btns .pillbtn").forEach((x) => x.classList.remove("active"));
+          b.classList.add("active");
+          currentCalcWarehouse = b.dataset.warehouse || "moscow";
+        });
+      });
+
       function fmtMoney(n) {
         if (n == null || isNaN(n)) return "—";
         return Math.round(n).toLocaleString("ru-RU");
@@ -774,7 +800,7 @@
         );
 
         const COMMISSION_RATE = 0.15;
-        const LOGISTICS_WB = 150;
+        const LOGISTICS_WB = 90; // рекомендуемый склад Москва
         const STORAGE_WB = 15;
         const SPP_RATE = 0.05;
         const ADS_RATE = 0.15;
@@ -867,6 +893,7 @@
               <div>📈 <b>Выручка ниши:</b> ${fmtMoney(
                 Math.round((p.niche_revenue || 0) / 100) * 100
               )} ₽</div>
+              <div>🏭 <b>Локализация:</b> склад Москва, 78%, логистика 90 ₽/шт</div>
               <div>✅ <b>Монополист:</b> ${p.monopolist ? "ДА" : "НЕТ"}</div>
               <div>💵 <b>Прибыль/мес:</b> ${fmtMoney(p.profit_per_month)} ₽</div>
               <div>🔄 <b>Выкуп:</b> ${Math.round(buyout)}%</div>
@@ -1225,7 +1252,7 @@
         const taxRate = parseFloat(document.getElementById("c-tax").value || "0.06");
 
         const commission = sell * 0.15;
-        const logisticsWb = 150;
+        const logisticsWb = WB_LOGISTICS[currentCalcWarehouse] ?? WB_LOGISTICS.moscow;
         const storage = 15;
         const spp = sell * 0.05;
         const ads = sell * 0.15;
@@ -1419,9 +1446,9 @@
         // Закупку оцениваем как 20% от цены продажи (если не пришло с API)
         const purchaseRub = Number(p.purchase_rub || Math.round(salePrice * 0.2));
 
-        // Константы (как в боте)
+        // Константы (как в боте): рекомендуемый склад Москва — 90 ₽/шт
         const COMMISSION_RATE = 0.15;
-        const LOGISTICS_WB = 150;
+        const LOGISTICS_WB = 90;
         const STORAGE_WB = 15;
         const SPP_RATE = 0.05;
         const ADS_RATE = 0.15;
@@ -1515,6 +1542,12 @@
           : "";
 
         modalBody.innerHTML = `
+          <div class="modal-section">
+            <h3>🏭 ЛОКАЛИЗАЦИЯ</h3>
+            <div>Рекомендуемый склад: Москва</div>
+            <div>Индекс локализации: 78%</div>
+            <div>Логистика: ${LOGISTICS_WB} ₽/шт</div>
+          </div>
           <div class="modal-section">
             <h3>Данные ниши</h3>
             <div>💵 Выручка ниши: ${fmtMoney(

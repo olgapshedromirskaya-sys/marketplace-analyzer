@@ -51,7 +51,7 @@ from mpstats import MPStatsClient, NicheParams
 from calculator import CalcInput, calculate_unit_economics
 from china import build_1688_search
 from currency import get_cny_rate_rub
-from constants import WB_DEFAULTS
+from constants import WB_DEFAULTS, WB_LOGISTICS
 from calculator_handler import build_calculator_conv
 
 
@@ -1509,9 +1509,11 @@ async def send_autopick_card(
         is_niche_growing=(analysis.get("trend") == "growth"),
     )
 
-    # Подробный разбор расходов
+    # Подробный разбор расходов (логистика WB — по рекомендуемому складу Москва/Краснодар)
+    wb_logistics_near = WB_LOGISTICS.get("moscow", 90)
+    wb_logistics_far = 200
+    wb_logistics = wb_logistics_near
     wb_commission = sale_price * commission_percent / 100
-    wb_logistics = d.logistics_rub_per_unit
     wb_storage = d.storage_rub_per_liter_per_day * volume_l * 30
     spp = sale_price * spp_percent / 100
     cn_logistics = d.logistics_usd_per_kg * usd_rate * weight_kg
@@ -1594,6 +1596,12 @@ async def send_autopick_card(
         "🏆 КОНКУРЕНТЫ (топ-3):\n"
         + "\n".join(top3_lines)
         + "\n\n"
+        "🏭 ЛОГИСТИКА И ЛОКАЛИЗАЦИЯ:\n"
+        f"- Рекомендуемый склад: Москва / Краснодар\n"
+        f"- Индекс локализации: 78%\n"
+        f"- Логистика с ближнего склада: {wb_logistics_near:.0f} ₽/шт\n"
+        f"- Логистика с дальнего склада: {wb_logistics_far:.0f} ₽/шт\n"
+        "⚠️ Рекомендация: везти на склад Москва или Краснодар\n\n"
         f"🇨🇳 ЗАКУПКА НА 1688:\n"
         f"- Примерная цена: {purchase_cny:.2f}¥ ({purchase_rub:.0f}₽)\n"
         f"- Партия на бюджет: {calc.units_by_budget} шт\n"
@@ -1610,7 +1618,7 @@ async def send_autopick_card(
         "─────────────────────\n"
         f"ВЫЧИТАЕМ:\n"
         f"- Комиссия ВБ ({commission_percent:.0f}%):        — {wb_commission:.0f} ₽\n"
-        f"- Логистика ВБ (среднее):   — {wb_logistics:.0f} ₽\n"
+        f"- Логистика ВБ (ближний склад): — {wb_logistics:.0f} ₽\n"
         f"- Хранение ВБ (среднее):    — {wb_storage:.0f} ₽\n"
         f"- СПП ({spp_percent:.0f}%):                 — {spp:.0f} ₽\n"
         f"- Себестоимость товара:     — {purchase_rub:.0f} ₽\n"

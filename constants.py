@@ -1,4 +1,15 @@
 from dataclasses import dataclass
+from typing import Dict
+
+
+# Логистика WB по складу хранения, руб/шт (для калькулятора и карточек товара)
+WB_LOGISTICS: Dict[str, float] = {
+    "moscow": 90.0,
+    "krasnodar": 110.0,
+    "kazan": 130.0,
+    "novosibirsk": 180.0,
+    "other": 150.0,
+}
 
 
 @dataclass
@@ -43,5 +54,5 @@ class WBConstants:
 WB_DEFAULTS = WBConstants()
 
 
-__all__ = ["WBConstants", "WB_DEFAULTS"]
+__all__ = ["WBConstants", "WB_DEFAULTS", "WB_LOGISTICS"]
 

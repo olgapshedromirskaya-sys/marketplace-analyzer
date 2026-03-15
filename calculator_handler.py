@@ -9,6 +9,8 @@ from telegram.ext import (
     filters,
 )
 
+from constants import WB_LOGISTICS
+
 
 class CalcStates(IntEnum):
     """
@@ -20,6 +22,7 @@ class CalcStates(IntEnum):
     CALC_SALE_PRICE = auto()
     CALC_BUDGET = auto()
     CALC_PLATFORM = auto()
+    CALC_WAREHOUSE = auto()
     CALC_TAX = auto()
 
 
@@ -91,6 +94,38 @@ async def calc_platform(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     context.user_data["calc_platform"] = plat
 
     kb = ReplyKeyboardMarkup(
+        [
+            ["Москва/СПб", "Краснодар"],
+            ["Казань", "Новосибирск"],
+            ["Другой"],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+    await update.effective_chat.send_message(
+        "Склад хранения:", reply_markup=kb
+    )
+    return CalcStates.CALC_WAREHOUSE
+
+
+def _warehouse_key(text: str) -> str:
+    t = text.strip().lower()
+    if "москва" in t or "спб" in t or "петербург" in t:
+        return "moscow"
+    if "краснодар" in t:
+        return "krasnodar"
+    if "казань" in t:
+        return "kazan"
+    if "новосибирск" in t:
+        return "novosibirsk"
+    return "other"
+
+
+async def calc_warehouse(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    key = _warehouse_key(update.message.text or "")
+    context.user_data["calc_warehouse"] = key
+
+    kb = ReplyKeyboardMarkup(
         [["УСН 6%", "УСН 15%"]],
         resize_keyboard=True,
         one_time_keyboard=True,
@@ -109,10 +144,11 @@ async def calc_tax(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     purchase_rub = float(context.user_data.get("calc_purchase_price_rub", 0.0))
     sale_price = float(context.user_data.get("calc_sale_price", 0.0))
     budget = float(context.user_data.get("calc_budget", 0.0))
+    warehouse_key = context.user_data.get("calc_warehouse", "moscow")
+    logistics_wb = float(WB_LOGISTICS.get(warehouse_key, WB_LOGISTICS["moscow"]))
 
     # Константы из ТЗ (средние значения)
     commission_rate = 0.15
-    logistics_wb = 150.0
     storage_wb = 15.0
     spp_rate = 0.05
     ads_rate = 0.15
@@ -245,6 +281,9 @@ def build_calculator_conv() -> ConversationHandler:
             ],
             CalcStates.CALC_PLATFORM: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, calc_platform)
+            ],
+            CalcStates.CALC_WAREHOUSE: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, calc_warehouse)
             ],
             CalcStates.CALC_TAX: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, calc_tax)
