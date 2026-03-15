@@ -144,210 +144,70 @@ class MPStatsClient:
         # 1. Термосы
         if "термос" in q:
             return [
-                {
-                    "name": "Термос Арктика 106-500 стальной 500 мл",
-                    "price": 1890,
-                    "sales_per_month": 1200,
-                    "rating": 4.8,
-                },
-                {
-                    "name": "Термокружка LaPlaya Office 500 мл нержавеющая сталь",
-                    "price": 1590,
-                    "sales_per_month": 950,
-                    "rating": 4.6,
-                },
-                {
-                    "name": "Термос Biostal NBP-500 туристический 500 мл",
-                    "price": 1390,
-                    "sales_per_month": 780,
-                    "rating": 4.7,
-                },
-                {
-                    "name": "Термос спортивный Tiger 0.5 л с поилкой",
-                    "price": 2290,
-                    "sales_per_month": 620,
-                    "rating": 4.9,
-                },
-                {
-                    "name": "Термос для еды Thermos King 470 мл",
-                    "price": 2590,
-                    "sales_per_month": 540,
-                    "rating": 4.8,
-                },
+                {"name": "Термос Арктика 106-500 стальной 500 мл", "price": 1890, "sales_per_month": 1200, "rating": 4.8, "buyout_rate": 0.76},
+                {"name": "Термокружка LaPlaya Office 500 мл нержавеющая сталь", "price": 1590, "sales_per_month": 950, "rating": 4.6, "buyout_rate": 0.74},
+                {"name": "Термос Biostal NBP-500 туристический 500 мл", "price": 1390, "sales_per_month": 780, "rating": 4.7, "buyout_rate": 0.72},
+                {"name": "Термос спортивный Tiger 0.5 л с поилкой", "price": 2290, "sales_per_month": 620, "rating": 4.9, "buyout_rate": 0.78},
+                {"name": "Термос для еды Thermos King 470 мл", "price": 2590, "sales_per_month": 540, "rating": 4.8, "buyout_rate": 0.75},
             ]
 
         # 2. Органайзеры для кабелей
         if "органайзер" in q or "кабел" in q:
             return [
-                {
-                    "name": "Органайзер для проводов Baseus Cube настольный",
-                    "price": 690,
-                    "sales_per_month": 1100,
-                    "rating": 4.7,
-                },
-                {
-                    "name": "Органайзер сумка для кабелей UGREEN двойной чехол",
-                    "price": 1290,
-                    "sales_per_month": 830,
-                    "rating": 4.8,
-                },
-                {
-                    "name": "Органайзер для кабелей Xiaomi Youpin настенный набор 10 шт",
-                    "price": 490,
-                    "sales_per_month": 1500,
-                    "rating": 4.6,
-                },
-                {
-                    "name": "Сумка-органайзер для электроники Mark Ryden Compact",
-                    "price": 1590,
-                    "sales_per_month": 540,
-                    "rating": 4.7,
-                },
-                {
-                    "name": "Органайзер для проводов силиконовый 5 каналов",
-                    "price": 350,
-                    "sales_per_month": 1900,
-                    "rating": 4.5,
-                },
+                {"name": "Органайзер для проводов Baseus Cube настольный", "price": 690, "sales_per_month": 1100, "rating": 4.7, "buyout_rate": 0.74},
+                {"name": "Органайзер сумка для кабелей UGREEN двойной чехол", "price": 1290, "sales_per_month": 830, "rating": 4.8, "buyout_rate": 0.72},
+                {"name": "Органайзер для кабелей Xiaomi Youpin настенный набор 10 шт", "price": 490, "sales_per_month": 1500, "rating": 4.6, "buyout_rate": 0.71},
+                {"name": "Сумка-органайзер для электроники Mark Ryden Compact", "price": 1590, "sales_per_month": 540, "rating": 4.7, "buyout_rate": 0.73},
+                {"name": "Органайзер для проводов силиконовый 5 каналов", "price": 350, "sales_per_month": 1900, "rating": 4.5, "buyout_rate": 0.70},
             ]
 
         # 3. Силиконовые формы для выпечки
         if "форма" in q or "выпеч" in q:
             return [
-                {
-                    "name": "Форма силиконовая Доляна для кексов 6 ячеек",
-                    "price": 490,
-                    "sales_per_month": 1400,
-                    "rating": 4.8,
-                },
-                {
-                    "name": "Форма для кексов TimA силиконовая 12 ячеек",
-                    "price": 690,
-                    "sales_per_month": 980,
-                    "rating": 4.7,
-                },
-                {
-                    "name": "Набор форм для выпечки Marmiton сердечки 6 шт",
-                    "price": 790,
-                    "sales_per_month": 760,
-                    "rating": 4.6,
-                },
-                {
-                    "name": "Форма силиконовая Bradex для маффинов 24 ячейки",
-                    "price": 1190,
-                    "sales_per_month": 520,
-                    "rating": 4.7,
-                },
-                {
-                    "name": "Форма для хлеба Appetite силиконовая 26×11 см",
-                    "price": 650,
-                    "sales_per_month": 680,
-                    "rating": 4.5,
-                },
+                {"name": "Форма силиконовая Доляна для кексов 6 ячеек", "price": 490, "sales_per_month": 1400, "rating": 4.8, "buyout_rate": 0.74},
+                {"name": "Форма для кексов TimA силиконовая 12 ячеек", "price": 690, "sales_per_month": 980, "rating": 4.7, "buyout_rate": 0.72},
+                {"name": "Набор форм для выпечки Marmiton сердечки 6 шт", "price": 790, "sales_per_month": 760, "rating": 4.6, "buyout_rate": 0.71},
+                {"name": "Форма силиконовая Bradex для маффинов 24 ячейки", "price": 1190, "sales_per_month": 520, "rating": 4.7, "buyout_rate": 0.73},
+                {"name": "Форма для хлеба Appetite силиконовая 26×11 см", "price": 650, "sales_per_month": 680, "rating": 4.5, "buyout_rate": 0.70},
             ]
 
         # 4. Чехлы для AirPods
         if "airpods" in q:
             return [
-                {
-                    "name": "Чехол силиконовый для AirPods 2/1 с карабином",
-                    "price": 390,
-                    "sales_per_month": 2100,
-                    "rating": 4.6,
-                },
-                {
-                    "name": "Чехол ESR Hybrid для AirPods Pro TPU + пластик",
-                    "price": 890,
-                    "sales_per_month": 980,
-                    "rating": 4.7,
-                },
-                {
-                    "name": "Чехол для AirPods 3 Spigen Rugged Armor",
-                    "price": 1290,
-                    "sales_per_month": 650,
-                    "rating": 4.8,
-                },
-                {
-                    "name": "Чехол силиконовый для AirPods Pro с ушками",
-                    "price": 450,
-                    "sales_per_month": 1500,
-                    "rating": 4.5,
-                },
-                {
-                    "name": "Чехол-книжка для AirPods Pro 2 кожзам",
-                    "price": 990,
-                    "sales_per_month": 430,
-                    "rating": 4.4,
-                },
+                {"name": "Чехол силиконовый для AirPods 2/1 с карабином", "price": 390, "sales_per_month": 2100, "rating": 4.6, "buyout_rate": 0.73},
+                {"name": "Чехол ESR Hybrid для AirPods Pro TPU + пластик", "price": 890, "sales_per_month": 980, "rating": 4.7, "buyout_rate": 0.72},
+                {"name": "Чехол для AirPods 3 Spigen Rugged Armor", "price": 1290, "sales_per_month": 650, "rating": 4.8, "buyout_rate": 0.74},
+                {"name": "Чехол силиконовый для AirPods Pro с ушками", "price": 450, "sales_per_month": 1500, "rating": 4.5, "buyout_rate": 0.71},
+                {"name": "Чехол-книжка для AirPods Pro 2 кожзам", "price": 990, "sales_per_month": 430, "rating": 4.4, "buyout_rate": 0.70},
             ]
 
         # 5. Массажные роллеры
         if "роллер" in q or "массаж" in q:
             return [
-                {
-                    "name": "Массажный роллер Lite Weights EVA 45 см",
-                    "price": 1590,
-                    "sales_per_month": 870,
-                    "rating": 4.7,
-                },
-                {
-                    "name": "Роллер для пилатеса Starfit FA-502 60 см",
-                    "price": 1890,
-                    "sales_per_month": 720,
-                    "rating": 4.8,
-                },
-                {
-                    "name": "Массажный валик Bradex «Рельеф» 33 см",
-                    "price": 1390,
-                    "sales_per_month": 960,
-                    "rating": 4.6,
-                },
-                {
-                    "name": "Роллер с шипами для миофасциального массажа Indigo 33 см",
-                    "price": 1790,
-                    "sales_per_month": 540,
-                    "rating": 4.7,
-                },
-                {
-                    "name": "Набор массажный роллер + мяч Record",
-                    "price": 2190,
-                    "sales_per_month": 430,
-                    "rating": 4.5,
-                },
+                {"name": "Массажный роллер Lite Weights EVA 45 см", "price": 1590, "sales_per_month": 870, "rating": 4.7, "buyout_rate": 0.78},
+                {"name": "Роллер для пилатеса Starfit FA-502 60 см", "price": 1890, "sales_per_month": 720, "rating": 4.8, "buyout_rate": 0.75},
+                {"name": "Массажный валик Bradex «Рельеф» 33 см", "price": 1390, "sales_per_month": 960, "rating": 4.6, "buyout_rate": 0.73},
+                {"name": "Роллер с шипами для миофасциального массажа Indigo 33 см", "price": 1790, "sales_per_month": 540, "rating": 4.7, "buyout_rate": 0.74},
+                {"name": "Набор массажный роллер + мяч Record", "price": 2190, "sales_per_month": 430, "rating": 4.5, "buyout_rate": 0.72},
             ]
 
-        # Запасной вариант — обобщённые, но правдоподобные названия
+        # 6. Посуда для дома (кастрюли, сковороды, миски)
+        if "посуда" in q or "кастрюл" in q or "сковород" in q or "миск" in q or "дом" in q:
+            return [
+                {"name": "Доляна Набор кастрюль 5 предметов нержавеющая сталь", "price": 1490, "sales_per_month": 2100, "rating": 4.8, "buyout_rate": 0.76},
+                {"name": "TalleR Сковорода 24 см антипригарная", "price": 1290, "sales_per_month": 1850, "rating": 4.7, "buyout_rate": 0.74},
+                {"name": "Rondell Кастрюля 3л с крышкой Premium", "price": 1790, "sales_per_month": 1200, "rating": 4.8, "buyout_rate": 0.77},
+                {"name": "Mallony Набор мисок 6 шт силикон", "price": 990, "sales_per_month": 2400, "rating": 4.6, "buyout_rate": 0.72},
+                {"name": "Berghoff Сковорода-гриль 28 см", "price": 1590, "sales_per_month": 980, "rating": 4.7, "buyout_rate": 0.75},
+            ]
+
+        # Запасной вариант — реальные бренды WB по разным категориям
         return [
-            {
-                "name": "Товар без бренда стандарт",
-                "price": 1490,
-                "sales_per_month": 900,
-                "rating": 4.6,
-            },
-            {
-                "name": "Товар популярный средний сегмент",
-                "price": 1290,
-                "sales_per_month": 750,
-                "rating": 4.5,
-            },
-            {
-                "name": "Товар премиум категория",
-                "price": 1790,
-                "sales_per_month": 600,
-                "rating": 4.8,
-            },
-            {
-                "name": "Товар бюджетный вариант",
-                "price": 990,
-                "sales_per_month": 500,
-                "rating": 4.3,
-            },
-            {
-                "name": "Товар брендовый массовый",
-                "price": 1590,
-                "sales_per_month": 450,
-                "rating": 4.6,
-            },
+            {"name": "Бархат Рулон бумажных полотенец 2 слоя 64 м", "price": 189, "sales_per_month": 8500, "rating": 4.7, "buyout_rate": 0.72},
+            {"name": "Лента Набор контейнеров для хранения 5 шт", "price": 690, "sales_per_month": 3200, "rating": 4.6, "buyout_rate": 0.71},
+            {"name": "IKEA Набор прихваток 3 шт силикон", "price": 390, "sales_per_month": 4100, "rating": 4.5, "buyout_rate": 0.70},
+            {"name": "Zepter Сотейник 24 см керамическое покрытие", "price": 3490, "sales_per_month": 420, "rating": 4.9, "buyout_rate": 0.78},
+            {"name": "Tefal Сковорода блинная 28 см индукция", "price": 2190, "sales_per_month": 1100, "rating": 4.8, "buyout_rate": 0.75},
         ]
 
 

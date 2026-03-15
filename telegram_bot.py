@@ -495,9 +495,14 @@ async def analyze_period(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     lines.append("")
     lines.append("Топ-5 конкурентов:")
     for c in result.get("top_competitors", []):
+        price = c.get("price") or 0
+        sales = c.get("sales_per_month") or 0
+        revenue = price * sales
+        buyout = (c.get("buyout_rate") or 0) * 100
         lines.append(
-            f"- {c.get('name')}: {c.get('price')} ₽, "
-            f"{c.get('sales_per_month')} продаж/мес, рейтинг {c.get('rating')}"
+            f"- {c.get('name')}: {price:,.0f} ₽\n"
+            f"  продаж/мес: {sales:,.0f}, рейтинг {c.get('rating', 0):.1f}, "
+            f"выкуп {buyout:.0f}%, выручка {revenue:,.0f} ₽/мес"
         )
     saved_id = save_analysis(
         user_id=update.effective_user.id,
