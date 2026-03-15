@@ -627,14 +627,24 @@ async def trends_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         "Стадии: 🌱 ЗАРОЖДЕНИЕ | 🚀 ВХОДИТЬ СЕЙЧАС | 📈 АКТИВНЫЙ РОСТ | 🔄 ЗРЕЛОСТЬ | 📉 СПАД\n\n"
         "━━━━━━━━━━━━━━━"
     )
+    def _sellers_label(sellers: int) -> str:
+        if sellers < 30:
+            return "(мало! 🔥 отличный момент)"
+        if sellers < 70:
+            return "(умеренная конкуренция)"
+        if sellers < 150:
+            return "(конкуренция есть)"
+        return "(высокая конкуренция)"
+
     await update.effective_chat.send_message(intro)
     for i, t in enumerate(DEMO_TRENDS, 1):
+        sellers = t["sellers"]
         card = (
             f"🔥 ТРЕНД #{i}: {t['name']}\n"
             f"📈 Рост запросов: {t['growth']} за 6 мес\n"
             f"📊 Стадия: {t['stage_emoji']} {t['stage']}\n"
             f"💰 Выручка ниши: {t['revenue']} ₽/мес\n"
-            f"👥 Продавцов: {t['sellers']} (мало!)\n"
+            f"👥 Продавцов: {sellers} {_sellers_label(sellers)}\n"
             f"🏆 Топ продавец: {t['top_share']} рынка\n"
             f"⭐ Потенциал: {t['potential']}\n"
             "━━━━━━━━━━━━━━━"
