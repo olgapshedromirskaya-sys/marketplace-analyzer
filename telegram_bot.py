@@ -522,6 +522,7 @@ async def analyze_period(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         ]
     )
     await update.effective_chat.send_message("\n".join(lines), reply_markup=kb)
+    await update.effective_chat.send_message("Главное меню:", reply_markup=main_menu_keyboard())
     return ConversationHandler.END
 
 
