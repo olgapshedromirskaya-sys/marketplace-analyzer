@@ -1556,19 +1556,25 @@ async def send_autopick_card(
 
     missed_revenue = float(analysis.get("missed_revenue_amount") or 0)
 
-    # Топ-3 конкурента для отображения с расшифровкой
+    # Топ-3 конкурента для отображения с расшифровкой (артикул WB из API или демо)
     top3_lines = []
     for i, c in enumerate(analysis.get("top_competitors", [])[:3], start=1):
         cname = c.get("name") or "—"
         cprice = float(c.get("price") or 0)
         csales = int(c.get("sales_per_month") or 0)
         crating = float(c.get("rating") or 0)
+        # Артикул WB: из MPStats API (article/nm_id) или демо — 9-значный
+        raw_article = c.get("article") or c.get("nm_id")
+        try:
+            carticle = str(int(raw_article)) if (raw_article is not None and int(raw_article) > 0) else ""
+        except (TypeError, ValueError):
+            carticle = ""
         # Выручка конкурента = цена × продажи/мес
         crevenue = cprice * csales
         # Если нет индивидуального % выкупа — берём общий по нише
         cbuyout = float(c.get("buyout_rate") or buyout) * 100
 
-        top3_lines.append(
+        block = (
             f"{i}. {cname}\n"
             f"   💰 Цена: {cprice:,.0f} ₽\n"
             f"   📦 Продаж: {csales} шт/мес\n"
@@ -1576,6 +1582,18 @@ async def send_autopick_card(
             f"   ⭐ Рейтинг: {crating:.1f}\n"
             f"   🔄 Выкуп: {cbuyout:.0f}%"
         )
+        if carticle:
+            block = (
+                f"{i}. {cname}\n"
+                f"   🔢 Артикул WB: {carticle}\n"
+                f"   🔗 https://www.wildberries.ru/catalog/{carticle}/detail.aspx\n"
+                f"   💰 Цена: {cprice:,.0f} ₽\n"
+                f"   📦 Продаж: {csales} шт/мес\n"
+                f"   💵 Выручка: {crevenue:,.0f} ₽/мес\n"
+                f"   ⭐ Рейтинг: {crating:.1f}\n"
+                f"   🔄 Выкуп: {cbuyout:.0f}%"
+            )
+        top3_lines.append(block)
     if not top3_lines:
         top3_lines.append("Нет данных по конкурентам.")
 
