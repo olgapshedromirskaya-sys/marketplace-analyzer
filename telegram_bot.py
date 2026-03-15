@@ -1142,29 +1142,34 @@ async def autopick_budget(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     context.user_data["ap_budget"] = budget
 
-    kb = ReplyKeyboardMarkup(
-        [["WB", "Ozon", "Обе"]],
-        resize_keyboard=True,
-        one_time_keyboard=True,
-    )
+    kb = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("WB", callback_data="platform_wb"),
+            InlineKeyboardButton("Ozon", callback_data="platform_ozon"),
+            InlineKeyboardButton("Обе", callback_data="platform_both"),
+        ],
+    ])
     await update.effective_chat.send_message(
         "Платформа: WB / Ozon / Обе.", reply_markup=kb
     )
     return AutoPickStates.FINDER_PLATFORM
 
 
-async def autopick_platform(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def autopick_platform_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """
-    Шаг 2 — выбираем платформу.
+    Шаг 2 — выбор платформы по inline-кнопке (callback_data: platform_wb | platform_ozon | platform_both).
     """
-    txt = update.message.text.strip().lower()
-    if txt.startswith("wb"):
+    query = update.callback_query
+    await query.answer()
+    data = (query.data or "").strip()
+    if data == "platform_wb":
         plat = "wb"
-    elif txt.startswith("ozon"):
+    elif data == "platform_ozon":
         plat = "ozon"
-    else:
+    elif data == "platform_both":
         plat = "both"
-
+    else:
+        plat = "wb"
     context.user_data["ap_platform"] = plat
 
     # Кнопки выбора месяца + «Пропустить»
@@ -1179,7 +1184,7 @@ async def autopick_platform(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         resize_keyboard=True,
         one_time_keyboard=True,
     )
-    await update.effective_chat.send_message(
+    await query.message.reply_text(
         "Выберите сезонный месяц или нажмите «⏭ Пропустить».",
         reply_markup=month_kb,
     )
@@ -1921,7 +1926,7 @@ def build_application() -> Application:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, autopick_budget)
             ],
             AutoPickStates.FINDER_PLATFORM: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, autopick_platform)
+                CallbackQueryHandler(autopick_platform_callback, pattern=r"^platform_(wb|ozon|both)$")
             ],
             AutoPickStates.FINDER_MONTH: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, autopick_season)
