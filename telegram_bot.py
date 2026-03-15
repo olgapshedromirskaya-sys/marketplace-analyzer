@@ -120,7 +120,10 @@ def main_menu_keyboard() -> ReplyKeyboardMarkup:
             KeyboardButton("📊 История анализов"),
         ],
         [
+            KeyboardButton("📈 Тренды"),
             KeyboardButton("👁 Отслеживать нишу"),
+        ],
+        [
             KeyboardButton("⚙️ Настройки"),
         ],
         [
@@ -544,6 +547,127 @@ async def watch_add_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     )
     await query.edit_message_reply_markup(reply_markup=None)
     await query.message.reply_text("👁 Ниша добавлена в отслеживание.")
+
+
+# ===== ТРЕНДЫ (ТРЕНДВОТЧИНГ) =====
+
+# Демо: топ-5 трендов 2026 для карточек и кнопки «Найти товар в этой нише»
+DEMO_TRENDS = [
+    {
+        "name": "Массажные пистолеты",
+        "growth": "+340%",
+        "stage": "ВХОДИТЬ СЕЙЧАС (ранний рост)",
+        "stage_emoji": "🚀",
+        "revenue": "18 500 000",
+        "sellers": 45,
+        "top_share": "22%",
+        "potential": "ВЫСОКИЙ",
+    },
+    {
+        "name": "Умные колонки с экраном",
+        "growth": "+210%",
+        "stage": "ВХОДИТЬ СЕЙЧАС (ранний рост)",
+        "stage_emoji": "🚀",
+        "revenue": "24 000 000",
+        "sellers": 62,
+        "top_share": "18%",
+        "potential": "ВЫСОКИЙ",
+    },
+    {
+        "name": "Товары для микрозелени",
+        "growth": "+180%",
+        "stage": "ВХОДИТЬ СЕЙЧАС (ранний рост)",
+        "stage_emoji": "🚀",
+        "revenue": "9 200 000",
+        "sellers": 38,
+        "top_share": "25%",
+        "potential": "ВЫСОКИЙ",
+    },
+    {
+        "name": "Антистресс игрушки для взрослых",
+        "growth": "+95%",
+        "stage": "АКТИВНЫЙ РОСТ",
+        "stage_emoji": "📈",
+        "revenue": "31 000 000",
+        "sellers": 88,
+        "top_share": "15%",
+        "potential": "СРЕДНИЙ",
+    },
+    {
+        "name": "Портативные блендеры",
+        "growth": "+120%",
+        "stage": "ВХОДИТЬ СЕЙЧАС (ранний рост)",
+        "stage_emoji": "🚀",
+        "revenue": "14 700 000",
+        "sellers": 52,
+        "top_share": "20%",
+        "potential": "ВЫСОКИЙ",
+    },
+]
+
+
+async def trends_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Показывает топ трендовых ниш (демо: 5 трендов 2026).
+    ШАГ 1–2 — источники и фильтры, ШАГ 3 — карточки с кнопкой «Найти товар в этой нише».
+    """
+    if not await ensure_access(update, context):
+        return
+    intro = (
+        "📈 Топ трендовых ниш (демо 2026)\n\n"
+        "ШАГ 1 — Источники данных:\n"
+        "• Google Trends — динамика запросов\n"
+        "• MPStats — рост продаж по категориям\n"
+        "• Wordstat — частота запросов в России\n\n"
+        "ШАГ 2 — Фильтры:\n"
+        "• Рост запросов > +50% за 6 мес\n"
+        "• Выручка ниши растёт\n"
+        "• Конкурентов мало (< 100 продавцов)\n"
+        "• Не сезонный всплеск — постоянный рост\n\n"
+        "Стадии: 🌱 ЗАРОЖДЕНИЕ | 🚀 ВХОДИТЬ СЕЙЧАС | 📈 АКТИВНЫЙ РОСТ | 🔄 ЗРЕЛОСТЬ | 📉 СПАД\n\n"
+        "━━━━━━━━━━━━━━━"
+    )
+    await update.effective_chat.send_message(intro)
+    for i, t in enumerate(DEMO_TRENDS, 1):
+        card = (
+            f"🔥 ТРЕНД #{i}: {t['name']}\n"
+            f"📈 Рост запросов: {t['growth']} за 6 мес\n"
+            f"📊 Стадия: {t['stage_emoji']} {t['stage']}\n"
+            f"💰 Выручка ниши: {t['revenue']} ₽/мес\n"
+            f"👥 Продавцов: {t['sellers']} (мало!)\n"
+            f"🏆 Топ продавец: {t['top_share']} рынка\n"
+            f"⭐ Потенциал: {t['potential']}\n"
+            "━━━━━━━━━━━━━━━"
+        )
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🎯 Найти товар в этой нише", callback_data=f"trend_pick:{i}")]
+        ])
+        await update.effective_chat.send_message(card, reply_markup=kb)
+
+
+async def trend_pick_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """
+    Вход в автоподбор из карточки тренда (callback trend_pick:1..5).
+    Устанавливает нишу по индексу и запрашивает бюджет.
+    """
+    if not await ensure_access(update, context):
+        return ConversationHandler.END
+    query = update.callback_query
+    await query.answer()
+    data = (query.data or "").strip()
+    try:
+        idx = int(data.replace("trend_pick:", "", 1).strip())
+        if 1 <= idx <= len(DEMO_TRENDS):
+            category_name = DEMO_TRENDS[idx - 1]["name"]
+            context.user_data["ap_trend_category"] = category_name
+            await query.message.reply_text(
+                f"Введите бюджет в рублях для подбора в нише «{category_name}»:"
+            )
+            return AutoPickStates.BUDGET
+    except (ValueError, IndexError):
+        pass
+    await query.message.reply_text("Не удалось определить нишу. Используйте меню «🎯 Подобрать товар».")
+    return ConversationHandler.END
 
 
 # ===== ИСТОРИЯ =====
@@ -984,14 +1108,18 @@ async def run_auto_selection(
 
     client = MPStatsClient()
 
-    # Набор базовых ниш (как для демо, так и для реального режима)
-    base_queries = [
-        ("Термос 500мл", "Термосы и термокружки"),
-        ("Органайзер для кабелей", "Органайзеры"),
-        ("Силиконовая форма для выпечки", "Товары для кухни"),
-        ("Чехол для AirPods", "Аксессуары для электроники"),
-        ("Массажный роллер", "Товары для спорта"),
-    ]
+    # Если зашли из карточки тренда — подбираем только в этой нише
+    trend_category = context.user_data.pop("ap_trend_category", None)
+    if trend_category:
+        base_queries = [(trend_category, trend_category)]
+    else:
+        base_queries = [
+            ("Термос 500мл", "Термосы и термокружки"),
+            ("Органайзер для кабелей", "Органайзеры"),
+            ("Силиконовая форма для выпечки", "Товары для кухни"),
+            ("Чехол для AirPods", "Аксессуары для электроники"),
+            ("Массажный роллер", "Товары для спорта"),
+        ]
 
     candidates = []
 
@@ -1534,6 +1662,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     # оставляем только простые действия.
     if text.startswith("📊"):
         await history_cmd(update, context)
+    elif text.startswith("📈"):
+        await trends_cmd(update, context)
     elif text.startswith("⚙️"):
         await settings_menu(update, context)
     elif text.startswith("👁"):
@@ -1626,6 +1756,7 @@ def build_application() -> Application:
         entry_points=[
             CommandHandler("autopick", autopick_entry),
             MessageHandler(filters.Regex(r"^🎯 Подобрать товар"), autopick_entry),
+            CallbackQueryHandler(trend_pick_entry, pattern=r"^trend_pick:"),
         ],
         states={
             AutoPickStates.BUDGET: [
