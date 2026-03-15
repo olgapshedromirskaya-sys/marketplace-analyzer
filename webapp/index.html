@@ -470,8 +470,27 @@
 
       <!-- ВКЛАДКА: ТРЕНДЫ -->
       <div id="tab-trends" class="hidden">
-        <div class="section-title">🔥 Трендовые ниши</div>
-        <div id="trends-list"></div>
+        <div id="trends-form" class="card">
+          <div class="section-title">Найти трендовые ниши</div>
+          <div style="margin-bottom: 10px">
+            <label>Платформа</label>
+            <div class="platform-btns" id="trends-platform-btns">
+              <button class="pillbtn wb active" data-platform="wb">WB</button>
+              <button class="pillbtn ozon" data-platform="ozon">Ozon</button>
+              <button class="pillbtn both" data-platform="both">Обе</button>
+            </div>
+          </div>
+          <div style="margin-bottom: 10px">
+            <label>Период</label>
+            <div class="platform-btns" id="trends-period-btns">
+              <button class="pillbtn active" data-period="1">1 мес</button>
+              <button class="pillbtn" data-period="3">3 мес</button>
+              <button class="pillbtn" data-period="6">6 мес</button>
+            </div>
+          </div>
+          <button class="primary" id="btn-find-trends">📈 Найти тренды</button>
+        </div>
+        <div id="trends-list" class="hidden" style="margin-top: 14px;"></div>
       </div>
 
       <!-- ВКЛАДКА: АНАЛИЗ НИШИ -->
@@ -637,7 +656,12 @@
         tabWatchlist.classList.toggle("hidden", name !== "watchlist");
         tabCalc.classList.toggle("hidden", name !== "calc");
         tabSettings.classList.toggle("hidden", name !== "settings");
-        if (name === "trends") renderTrends();
+        if (name === "trends") {
+          const formEl = document.getElementById("trends-form");
+          const listEl = document.getElementById("trends-list");
+          if (formEl) formEl.classList.remove("hidden");
+          if (listEl) listEl.classList.add("hidden");
+        }
         if (name === "watchlist") renderWatchlist();
       }
 
@@ -1113,6 +1137,31 @@
         { id: 4, title: "Силиконовые формы для кексов", growth: 62, months: 6, cta: "СЛЕДИТЬ", revenue: 28000000, sellers: 95, sellersLabel: "средне", potential: "СРЕДНИЙ" },
         { id: 5, title: "Чехлы для AirPods Pro", growth: 38, months: 6, cta: "ОСТОРОЖНО", revenue: 18000000, sellers: 150, sellersLabel: "много", potential: "НИЗКИЙ" },
       ];
+
+      let currentTrendPlatform = "wb";
+      let currentTrendPeriod = 1;
+      document.querySelectorAll("#trends-platform-btns .pillbtn").forEach((b) => {
+        b.addEventListener("click", () => {
+          document.querySelectorAll("#trends-platform-btns .pillbtn").forEach((x) => x.classList.remove("active"));
+          b.classList.add("active");
+          currentTrendPlatform = b.dataset.platform || "wb";
+        });
+      });
+      document.querySelectorAll("#trends-period-btns .pillbtn").forEach((b) => {
+        b.addEventListener("click", () => {
+          document.querySelectorAll("#trends-period-btns .pillbtn").forEach((x) => x.classList.remove("active"));
+          b.classList.add("active");
+          currentTrendPeriod = parseInt(b.dataset.period || "1", 10);
+        });
+      });
+
+      document.getElementById("btn-find-trends").addEventListener("click", () => {
+        const formEl = document.getElementById("trends-form");
+        const listEl = document.getElementById("trends-list");
+        if (formEl) formEl.classList.add("hidden");
+        if (listEl) listEl.classList.remove("hidden");
+        renderTrends();
+      });
 
       function renderTrends() {
         const container = document.getElementById("trends-list");
