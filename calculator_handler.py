@@ -12,15 +12,15 @@ from telegram.ext import (
 
 class CalcStates(IntEnum):
     """
-    Стадии диалога финансового калькулятора.
+    Стадии диалога финансового калькулятора (уникальные имена, префикс CALC_).
     """
 
-    NAME = auto()
-    PURCHASE_PRICE = auto()
-    SALE_PRICE = auto()
-    BUDGET = auto()
-    PLATFORM = auto()
-    TAX = auto()
+    CALC_NAME = auto()
+    CALC_PURCHASE_PRICE = auto()
+    CALC_SALE_PRICE = auto()
+    CALC_BUDGET = auto()
+    CALC_PLATFORM = auto()
+    CALC_TAX = auto()
 
 
 async def calc_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -32,13 +32,13 @@ async def calc_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         "Введите название товара, который будем считать "
         "(например: «Термос 500 мл»)."
     )
-    return CalcStates.NAME
+    return CalcStates.CALC_NAME
 
 
 async def calc_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["calc_name"] = update.message.text.strip()
     await update.effective_chat.send_message("Введите цену закупки в рублях:")
-    return CalcStates.PURCHASE_PRICE
+    return CalcStates.CALC_PURCHASE_PRICE
 
 
 async def calc_purchase_price(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -46,11 +46,11 @@ async def calc_purchase_price(update: Update, context: ContextTypes.DEFAULT_TYPE
         price = float(update.message.text.replace(",", "."))
     except ValueError:
         await update.effective_chat.send_message("Не смог понять число, попробуйте ещё раз (рубли).")
-        return CalcStates.PURCHASE_PRICE
+        return CalcStates.CALC_PURCHASE_PRICE
 
     context.user_data["calc_purchase_price_rub"] = price
     await update.effective_chat.send_message("Введите цену продажи на WB в рублях:")
-    return CalcStates.SALE_PRICE
+    return CalcStates.CALC_SALE_PRICE
 
 
 async def calc_sale_price(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -58,11 +58,11 @@ async def calc_sale_price(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         sale = float(update.message.text.replace(",", "."))
     except ValueError:
         await update.effective_chat.send_message("Введите число (рубли).")
-        return CalcStates.SALE_PRICE
+        return CalcStates.CALC_SALE_PRICE
 
     context.user_data["calc_sale_price"] = sale
     await update.effective_chat.send_message("Введите ваш бюджет в рублях:")
-    return CalcStates.BUDGET
+    return CalcStates.CALC_BUDGET
 
 
 async def calc_budget(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -70,7 +70,7 @@ async def calc_budget(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         budget = float(update.message.text.replace(",", "."))
     except ValueError:
         await update.effective_chat.send_message("Введите число (рубли).")
-        return CalcStates.BUDGET
+        return CalcStates.CALC_BUDGET
 
     context.user_data["calc_budget"] = budget
 
@@ -82,7 +82,7 @@ async def calc_budget(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     await update.effective_chat.send_message(
         "Платформа: WB или Ozon.", reply_markup=kb
     )
-    return CalcStates.PLATFORM
+    return CalcStates.CALC_PLATFORM
 
 
 async def calc_platform(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -98,7 +98,7 @@ async def calc_platform(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     await update.effective_chat.send_message(
         "Налоговый режим: УСН 6% или УСН 15%.", reply_markup=kb
     )
-    return CalcStates.TAX
+    return CalcStates.CALC_TAX
 
 
 async def calc_tax(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -231,22 +231,22 @@ def build_calculator_conv() -> ConversationHandler:
             MessageHandler(filters.Regex(r"^💰 Калькулятор"), calc_entry),
         ],
         states={
-            CalcStates.NAME: [
+            CalcStates.CALC_NAME: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, calc_name)
             ],
-            CalcStates.PURCHASE_PRICE: [
+            CalcStates.CALC_PURCHASE_PRICE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, calc_purchase_price)
             ],
-            CalcStates.SALE_PRICE: [
+            CalcStates.CALC_SALE_PRICE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, calc_sale_price)
             ],
-            CalcStates.BUDGET: [
+            CalcStates.CALC_BUDGET: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, calc_budget)
             ],
-            CalcStates.PLATFORM: [
+            CalcStates.CALC_PLATFORM: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, calc_platform)
             ],
-            CalcStates.TAX: [
+            CalcStates.CALC_TAX: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, calc_tax)
             ],
         },

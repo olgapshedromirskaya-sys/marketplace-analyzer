@@ -59,10 +59,11 @@ logger = logging.getLogger(__name__)
 
 
 class AnalyzeStates(IntEnum):
-    KEYWORD = auto()
-    BUDGET = auto()
-    PLATFORM = auto()
-    PERIOD = auto()
+    """Состояния диалога «Анализ ниши» (уникальные имена, не пересекаются с другими)."""
+    NICHE_KEYWORD = auto()
+    NICHE_BUDGET = auto()
+    NICHE_PLATFORM = auto()
+    NICHE_PERIOD = auto()
 
 
 class TokenStates(IntEnum):
@@ -88,12 +89,11 @@ class ChinaStates(IntEnum):
 
 class AutoPickStates(IntEnum):
     """
-    Стадии диалога автоматического подбора товара.
+    Стадии диалога автоматического подбора товара (уникальные имена).
     """
-
-    BUDGET = auto()
-    PLATFORM = auto()
-    MONTH = auto()
+    FINDER_BUDGET = auto()
+    FINDER_PLATFORM = auto()
+    FINDER_MONTH = auto()
 
 
 class StaffStates(IntEnum):
@@ -396,13 +396,13 @@ async def analyze_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     await update.effective_chat.send_message(
         "🔍 Введите ключевое слово или категорию для анализа."
     )
-    return AnalyzeStates.KEYWORD
+    return AnalyzeStates.NICHE_KEYWORD
 
 
 async def analyze_keyword(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["an_query"] = update.message.text.strip()
     await update.effective_chat.send_message("Введите бюджет в рублях.")
-    return AnalyzeStates.BUDGET
+    return AnalyzeStates.NICHE_BUDGET
 
 
 async def analyze_budget(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -410,7 +410,7 @@ async def analyze_budget(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         budget = float(update.message.text.replace(",", "."))
     except ValueError:
         await update.effective_chat.send_message("Не смог понять число. Введите бюджет в рублях ещё раз.")
-        return AnalyzeStates.BUDGET
+        return AnalyzeStates.NICHE_BUDGET
     context.user_data["an_budget"] = budget
     kb = ReplyKeyboardMarkup(
         [["WB", "Ozon", "Обе"]],
@@ -420,7 +420,7 @@ async def analyze_budget(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.effective_chat.send_message(
         "Выберите платформу: WB / Ozon / Обе.", reply_markup=kb
     )
-    return AnalyzeStates.PLATFORM
+    return AnalyzeStates.NICHE_PLATFORM
 
 
 async def analyze_platform(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -438,7 +438,7 @@ async def analyze_platform(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         one_time_keyboard=True,
     )
     await update.effective_chat.send_message("Выберите период: 1 / 3 / 6 месяцев.", reply_markup=kb)
-    return AnalyzeStates.PERIOD
+    return AnalyzeStates.NICHE_PERIOD
 
 
 async def analyze_period(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -447,7 +447,7 @@ async def analyze_period(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         months = int(text)
     except ValueError:
         await update.effective_chat.send_message("Введите 1, 3 или 6.")
-        return AnalyzeStates.PERIOD
+        return AnalyzeStates.NICHE_PERIOD
     query = context.user_data["an_query"]
     budget = context.user_data["an_budget"]
     platform = context.user_data["an_platform"]
@@ -679,7 +679,7 @@ async def trend_pick_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await query.message.reply_text(
                 f"Введите бюджет в рублях для подбора в нише «{category_name}»:"
             )
-            return AutoPickStates.BUDGET
+            return AutoPickStates.FINDER_BUDGET
     except (ValueError, IndexError):
         pass
     await query.message.reply_text("Не удалось определить нишу. Используйте меню «🎯 Подобрать товар».")
@@ -1011,7 +1011,7 @@ async def autopick_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         "🎯 Автоматический подбор товара.\n\n"
         "Сначала введите ваш бюджет в рублях (например: 100000)."
     )
-    return AutoPickStates.BUDGET
+    return AutoPickStates.FINDER_BUDGET
 
 
 async def autopick_budget(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -1022,7 +1022,7 @@ async def autopick_budget(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         budget = float(update.message.text.replace(",", "."))
     except ValueError:
         await update.effective_chat.send_message("Не смог понять число. Введите бюджет ещё раз.")
-        return AutoPickStates.BUDGET
+        return AutoPickStates.FINDER_BUDGET
 
     context.user_data["ap_budget"] = budget
 
@@ -1034,7 +1034,7 @@ async def autopick_budget(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     await update.effective_chat.send_message(
         "Платформа: WB / Ozon / Обе.", reply_markup=kb
     )
-    return AutoPickStates.PLATFORM
+    return AutoPickStates.FINDER_PLATFORM
 
 
 async def autopick_platform(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -1067,7 +1067,7 @@ async def autopick_platform(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         "Выберите сезонный месяц или нажмите «⏭ Пропустить».",
         reply_markup=month_kb,
     )
-    return AutoPickStates.MONTH
+    return AutoPickStates.FINDER_MONTH
 
 
 async def autopick_season(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -1732,6 +1732,29 @@ def build_application() -> Application:
         name="staff_conv",
     )
     app.add_handler(staff_conv)
+    # Анализ ниши — регистрируем сразу после staff, чтобы текст (ключевое слово и т.д.) не перехватывали другие диалоги
+    analyze_conv = ConversationHandler(
+        entry_points=[
+            CommandHandler("analyze", analyze_entry),
+            MessageHandler(filters.Regex(r"^🔍 Анализ ниши"), analyze_entry),
+        ],
+        states={
+            AnalyzeStates.NICHE_KEYWORD: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_keyword)
+            ],
+            AnalyzeStates.NICHE_BUDGET: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_budget)
+            ],
+            AnalyzeStates.NICHE_PLATFORM: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_platform)
+            ],
+            AnalyzeStates.NICHE_PERIOD: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_period)
+            ],
+        },
+        fallbacks=[CommandHandler("cancel", analyze_entry)],
+    )
+    app.add_handler(analyze_conv)
     token_conv = ConversationHandler(
         entry_points=[CommandHandler("settoken", settoken_start)],
         states={
@@ -1742,29 +1765,6 @@ def build_application() -> Application:
         fallbacks=[CommandHandler("cancel", settoken_cancel)],
     )
     app.add_handler(token_conv)
-    analyze_conv = ConversationHandler(
-        entry_points=[
-            CommandHandler("analyze", analyze_entry),
-            MessageHandler(filters.Regex(r"^🔍 Анализ ниши"), analyze_entry),
-        ],
-        states={
-            AnalyzeStates.KEYWORD: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_keyword)
-            ],
-            AnalyzeStates.BUDGET: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_budget)
-            ],
-            AnalyzeStates.PLATFORM: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_platform)
-            ],
-            AnalyzeStates.PERIOD: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_period)
-            ],
-        },
-        fallbacks=[CommandHandler("cancel", analyze_entry)],
-    )
-    app.add_handler(analyze_conv)
-    # Калькулятор — вынесен в отдельный модуль calculator_handler.py
     app.add_handler(build_calculator_conv())
 
     # Автоподбор товара
@@ -1775,13 +1775,13 @@ def build_application() -> Application:
             CallbackQueryHandler(trend_pick_entry, pattern=r"^trend_pick:"),
         ],
         states={
-            AutoPickStates.BUDGET: [
+            AutoPickStates.FINDER_BUDGET: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, autopick_budget)
             ],
-            AutoPickStates.PLATFORM: [
+            AutoPickStates.FINDER_PLATFORM: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, autopick_platform)
             ],
-            AutoPickStates.MONTH: [
+            AutoPickStates.FINDER_MONTH: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, autopick_season)
             ],
         },
