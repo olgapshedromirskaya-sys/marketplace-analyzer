@@ -2,1021 +2,1195 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Marketplace Analyzer</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
-  --bg:#0e0e16;--surface:#17172a;--surface2:#1e1e35;--surface3:#252540;
-  --border:#2a2a4a;--border2:#3a3a60;
-  --purple:#8b5cf6;--purple2:#a78bfa;--purple3:#c4b5fd;
-  --pink:#ec4899;--grad:linear-gradient(135deg,#8b5cf6,#ec4899);
-  --green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--blue:#3b82f6;
-  --text:#f1f5f9;--muted:#94a3b8;--muted2:#64748b;
+  --bg:#0e0e18;--s1:#15152a;--s2:#1c1c35;--s3:#232340;
+  --bd:#2a2a50;--bd2:#3a3a65;
+  --p:#7c3aed;--p2:#a78bfa;--p3:#c4b5fd;
+  --pk:#db2777;--grad:linear-gradient(135deg,#7c3aed,#db2777);
+  --g2:linear-gradient(135deg,#6d28d9,#9d174d);
+  --grn:#16a34a;--red:#dc2626;--ylw:#d97706;--blu:#2563eb;
+  --txt:#f1f5f9;--m1:#94a3b8;--m2:#64748b;--m3:#475569;
 }
-html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:'Inter',sans-serif}
+body{display:flex;flex-direction:column}
 
-/* HEADER */
-.hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50}
-.hdr-title{font-size:18px;font-weight:800;color:var(--text)}
-.hdr-demo{font-size:11px;color:var(--muted);background:var(--surface2);padding:3px 9px;border-radius:10px;border:1px solid var(--border)}
+/* ── HEADER ── */
+.hdr{background:var(--s1);border-bottom:1px solid var(--bd);padding:14px 16px 12px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.hdr-name{font-size:17px;font-weight:800;letter-spacing:-.3px}
+.hdr-mode{font-size:11px;color:var(--m1);background:var(--s2);border:1px solid var(--bd);padding:3px 10px;border-radius:10px}
 
-/* TABS */
-.tabs-bar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none;padding:0 8px}
-.tabs-bar::-webkit-scrollbar{display:none}
-.tab-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 12px;cursor:pointer;color:var(--muted2);font-size:10px;font-weight:600;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s;flex-shrink:0;min-width:64px}
-.tab-item.active{color:var(--purple2);border-bottom-color:var(--purple)}
-.tab-icon{width:34px;height:34px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s}
-.tab-item.active .tab-icon{background:var(--grad)}
+/* ── TABS ── */
+.tabs{background:var(--s1);border-bottom:1px solid var(--bd);display:flex;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.tabs::-webkit-scrollbar{display:none}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0;cursor:pointer;color:var(--m2);font-size:9px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;border-bottom:2px solid transparent;transition:all .2s;min-width:60px;flex:1}
+.tab.on{color:var(--p2);border-bottom-color:var(--p)}
+.tab-ico{width:32px;height:32px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .2s}
+.tab.on .tab-ico{background:var(--grad)}
 
-/* MAIN */
-.main{padding:16px;max-width:500px;margin:0 auto}
+/* ── SCROLL AREA ── */
+.body{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.body::-webkit-scrollbar{width:2px}
+.body::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+.pg{display:none;padding:14px 14px 28px}
+.pg.on{display:block}
 
-/* SECTION HIDDEN */
-.section{display:none}
-.section.active{display:block}
-
-/* CARDS */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
-.card-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:6px}
-
-/* INPUTS */
-.inp-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px}
-.inp{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;-webkit-appearance:none}
-.inp:focus{border-color:var(--purple)}
-.inp::placeholder{color:var(--muted2)}
-select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
-select.inp option{background:var(--surface2)}
-.inp-group{margin-bottom:12px}
-.inp-hint{font-size:11px;color:var(--muted2);margin-top:4px}
+/* ── ELEMENTS ── */
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:15px;margin-bottom:12px}
+.sec-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--p2);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--m2);display:block;margin-bottom:5px}
+.inp{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:11px 13px;color:var(--txt);font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;-webkit-appearance:none}
+.inp:focus{border-color:var(--p)}
+.inp::placeholder{color:var(--m3)}
+select.inp{cursor:pointer;padding-right:32px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.inp-g{margin-bottom:11px}
+.inp-hint{font-size:11px;color:var(--m2);margin-top:4px;line-height:1.4}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 
-/* TOGGLE */
-.toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
-.toggle input{opacity:0;width:0;height:0}
-.toggle-slider{position:absolute;inset:0;background:var(--border2);border-radius:12px;cursor:pointer;transition:.3s}
-.toggle-slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
-input:checked+.toggle-slider{background:var(--purple)}
-input:checked+.toggle-slider::before{transform:translateX(20px)}
-.toggle-label{font-size:13px;color:var(--text);font-weight:500}
+/* percent suffix input */
+.inp-sfx{position:relative}
+.inp-sfx .inp{padding-right:32px}
+.inp-sfx::after{content:'%';position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--m2);font-size:13px;pointer-events:none}
 
-/* PERIOD BTNS */
-.period-row{display:flex;gap:8px;margin-top:8px}
-.period-btn{padding:8px 20px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
-.period-btn.active{background:var(--grad);border-color:transparent;color:#fff}
+/* ── BUTTON ── */
+.btn{width:100%;padding:13px;background:var(--grad);color:#fff;font-size:14px;font-weight:700;border:none;border-radius:12px;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:7px;margin-top:12px;transition:opacity .2s}
+.btn:hover{opacity:.88}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.btn-sm{width:auto;padding:8px 14px;font-size:12px;border-radius:9px;margin-top:0}
+.btn-out{background:transparent;color:var(--p2);border:1px solid var(--p);margin-top:8px}
+.btn-out:hover{background:rgba(124,58,237,.1)}
 
-/* MODEL CHECKBOXES */
-.model-list{display:flex;flex-direction:column;gap:8px}
-.model-cb{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:all .2s}
-.model-cb.selected{border-color:var(--purple);background:rgba(139,92,246,.1)}
-.model-cb input{display:none}
-.cb-box{width:18px;height:18px;border-radius:5px;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
-.model-cb.selected .cb-box{background:var(--purple);border-color:var(--purple)}
-.cb-check{color:#fff;font-size:11px;display:none}
-.model-cb.selected .cb-check{display:block}
-.cb-label{font-size:13px;font-weight:500}
-.cb-sublabel{font-size:11px;color:var(--muted);margin-left:28px;margin-top:-4px}
+/* ── TOGGLE ── */
+.tgl-row{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.tgl{position:relative;width:42px;height:23px;flex-shrink:0}
+.tgl input{opacity:0;width:0;height:0}
+.tgl-sl{position:absolute;inset:0;background:var(--bd2);border-radius:11.5px;cursor:pointer;transition:.25s}
+.tgl-sl::before{content:'';position:absolute;width:17px;height:17px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.25s}
+input:checked+.tgl-sl{background:var(--p)}
+input:checked+.tgl-sl::before{transform:translateX(19px)}
+.tgl-lbl{font-size:13px;font-weight:500}
 
-/* WAREHOUSE BTNS */
-.wh-row{display:flex;gap:8px;flex-wrap:wrap}
-.wh-btn{padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
-.wh-btn.active{background:var(--grad);border-color:transparent;color:#fff}
+/* ── CHIPS / PERIODS ── */
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{padding:7px 16px;border-radius:20px;border:1px solid var(--bd);background:var(--s2);color:var(--m1);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.chip.on{background:var(--grad);border-color:transparent;color:#fff}
 
-/* TAX RADIO */
-.tax-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
-.tax-opt{padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);text-align:center;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);transition:all .2s}
-.tax-opt.active{border-color:var(--purple);color:var(--purple2);background:rgba(139,92,246,.1)}
-.tax-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+/* ── MODELS ── */
+.model-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--s2);cursor:pointer;margin-bottom:7px;transition:all .2s}
+.model-item.on{border-color:var(--p);background:rgba(124,58,237,.1)}
+.cb{width:18px;height:18px;border-radius:5px;border:2px solid var(--bd2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;font-size:10px}
+.model-item.on .cb{background:var(--p);border-color:var(--p);color:#fff}
 
-/* MANUAL EXPENSES */
-.expense-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}
-.expense-row:last-child{border-bottom:none}
-.expense-lbl{font-size:12px;color:var(--muted2)}
-.expense-inp{width:100px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-size:13px;font-weight:600;text-align:right;font-family:'Inter',sans-serif;outline:none}
-.expense-inp:focus{border-color:var(--purple)}
+/* ── WH CHIPS ── */
+.wh-chip{padding:8px 16px;border-radius:20px;border:1px solid var(--bd);background:var(--s2);color:var(--m1);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.wh-chip.on{background:var(--grad);border-color:transparent;color:#fff}
 
-/* BTN GRAD */
-.btn-grad{width:100%;padding:14px;background:var(--grad);color:#fff;font-size:15px;font-weight:700;border:none;border-radius:12px;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity .2s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px}
-.btn-grad:hover{opacity:.9}
-.btn-grad:active{transform:scale(.98)}
-.btn-grad:disabled{opacity:.4;cursor:not-allowed;transform:none}
-.btn-outline{width:100%;padding:11px;background:transparent;color:var(--purple2);font-size:13px;font-weight:700;border:1px solid var(--purple);border-radius:12px;cursor:pointer;font-family:'Inter',sans-serif;margin-top:8px;transition:all .2s}
-.btn-outline:hover{background:rgba(139,92,246,.1)}
+/* ── TAX ── */
+.tax-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:7px}
+.tax-o{padding:9px;border-radius:9px;border:1px solid var(--bd);background:var(--s2);text-align:center;font-size:12px;font-weight:700;color:var(--m1);cursor:pointer;transition:all .2s}
+.tax-o.on{border-color:var(--p);color:var(--p2);background:rgba(124,58,237,.1)}
 
-/* RESULTS */
-.result-card{background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:14px;margin-bottom:10px}
-.result-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px}
-.result-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}
-.result-row:last-child{border-bottom:none}
-.result-lbl{color:var(--muted2)}
-.result-val{font-weight:600;font-family:'Inter',monospace}
-.result-val.red{color:var(--red)}
-.result-val.green{color:var(--green)}
-.result-val.yellow{color:var(--yellow)}
-.result-total{display:flex;justify-content:space-between;align-items:center;padding:12px 0;font-size:15px;font-weight:800;border-top:2px solid var(--border2);margin-top:6px}
-.profit-big{font-size:28px;font-weight:800;text-align:center;padding:16px 0}
-.margin-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin:8px 0}
-.margin-fill{height:100%;border-radius:4px;transition:width .6s ease}
+/* ── EXPENSE ROWS ── */
+.exp-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.exp-row:last-child{border-bottom:none}
+.exp-lbl{font-size:12px;color:var(--m2)}
+.exp-inp{width:90px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:6px 10px;color:var(--txt);font-size:13px;font-weight:700;text-align:right;font-family:'Inter',sans-serif;outline:none}
+.exp-inp:focus{border-color:var(--p)}
 
-/* CHINA LOGISTICS */
-.china-section{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:12px;padding:14px;margin-bottom:12px}
-.china-title{font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:5px}
-.china-row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid rgba(59,130,246,.1)}
-.china-row:last-child{border-bottom:none}
+/* ── RESULTS ── */
+.res-card{background:var(--s2);border:1px solid var(--bd2);border-radius:12px;padding:13px;margin-bottom:10px}
+.res-hdr{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--m2);margin-bottom:8px}
+.res-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}
+.res-row:last-child{border-bottom:none}
+.res-lbl{color:var(--m2)}
+.res-val{font-weight:700}
+.res-val.g{color:#4ade80} .res-val.r{color:#f87171} .res-val.y{color:#fbbf24}
+.profit-num{font-size:32px;font-weight:900;text-align:center;padding:14px 0;letter-spacing:-1px}
+.mb{height:6px;background:var(--bd);border-radius:3px;overflow:hidden;margin:7px 0}
+.mb-fill{height:100%;border-radius:3px;transition:width .7s ease}
+
+/* PRODUCT CARD */
+.prod-card{background:var(--s1);border:1px solid var(--bd);border-radius:13px;padding:14px;margin-bottom:10px}
+.prod-name{font-size:14px;font-weight:700;margin-bottom:6px;line-height:1.4}
+.prod-meta{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.tag{padding:3px 9px;border-radius:8px;font-size:10px;font-weight:700}
+.tag-g{background:rgba(22,163,74,.14);color:#4ade80}
+.tag-y{background:rgba(217,119,6,.14);color:#fbbf24}
+.tag-r{background:rgba(220,38,38,.14);color:#f87171}
+.tag-b{background:rgba(37,99,235,.14);color:#60a5fa}
+.tag-p{background:rgba(124,58,237,.14);color:var(--p2)}
+.prod-metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.pm-box{background:var(--s2);border-radius:8px;padding:9px;text-align:center}
+.pm-val{font-size:16px;font-weight:800;margin-bottom:2px}
+.pm-lbl{font-size:9px;color:var(--m2);text-transform:uppercase;letter-spacing:.5px}
+.wb-link{display:flex;align-items:center;gap:6px;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.25);border-radius:9px;padding:9px 12px;font-size:12px;color:#60a5fa;cursor:pointer;text-decoration:none;font-weight:600;transition:all .2s}
+.wb-link:hover{background:rgba(37,99,235,.15)}
+
+/* TREND CARD */
+.trend-card{background:var(--s1);border:1px solid var(--bd);border-radius:13px;padding:14px;margin-bottom:10px}
+.trend-src{display:flex;align-items:center;gap:7px;margin-bottom:10px}
+.src-badge{padding:3px 10px;border-radius:8px;font-size:10px;font-weight:800;letter-spacing:.3px}
+.src-alpha{background:rgba(217,119,6,.18);color:#fbbf24;border:1px solid rgba(217,119,6,.3)}
+.src-baidu{background:rgba(220,38,38,.14);color:#f87171;border:1px solid rgba(220,38,38,.25)}
+.src-alibaba{background:rgba(249,115,22,.14);color:#fb923c;border:1px solid rgba(249,115,22,.25)}
+.src-google{background:rgba(22,163,74,.12);color:#4ade80;border:1px solid rgba(22,163,74,.25)}
+.trend-title{font-size:14px;font-weight:700;margin-bottom:7px;line-height:1.4}
+.trend-body{font-size:12px;color:var(--m1);line-height:1.65}
+.trend-stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:9px}
+.tst{font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;background:var(--s2)}
+.tst.up{color:#4ade80} .tst.dn{color:#f87171} .tst.nt{color:var(--m1)}
+
+/* ANALYSIS CARD */
+.an-card{background:var(--s1);border:1px solid var(--bd);border-radius:13px;padding:14px;margin-bottom:10px}
+.an-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}
+.an-row:last-child{border-bottom:none}
+.an-lbl{color:var(--m2)}
+.an-val{font-weight:700}
+.season-bar{margin-top:10px}
+.s-months{display:grid;grid-template-columns:repeat(12,1fr);gap:2px;margin-top:6px}
+.s-month{display:flex;flex-direction:column;align-items:center;gap:3px}
+.s-bar-wrap{height:40px;display:flex;align-items:flex-end}
+.s-bar-fill{width:100%;border-radius:2px 2px 0 0;min-height:3px;transition:height .5s ease}
+.s-bar-lbl{font-size:8px;color:var(--m3)}
 
 /* WATCHLIST */
-.watch-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;position:relative}
-.watch-name{font-size:14px;font-weight:700;margin-bottom:4px}
-.watch-meta{font-size:12px;color:var(--muted);margin-bottom:8px}
-.watch-tags{display:flex;gap:6px;flex-wrap:wrap}
-.watch-tag{padding:3px 9px;border-radius:8px;font-size:10px;font-weight:700}
-.watch-del{position:absolute;top:12px;right:12px;background:none;border:none;color:var(--muted2);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:6px}
-.watch-del:hover{color:var(--red);background:rgba(239,68,68,.1)}
-.empty{text-align:center;padding:32px 16px;color:var(--muted)}
-.empty-icon{font-size:36px;margin-bottom:8px;opacity:.4}
-.empty-txt{font-size:13px;line-height:1.6}
+.wl-card{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:13px;margin-bottom:9px;position:relative}
+.wl-name{font-size:14px;font-weight:700;margin-bottom:4px}
+.wl-meta{font-size:11px;color:var(--m2);margin-bottom:8px}
+.wl-del{position:absolute;top:11px;right:11px;background:none;border:none;color:var(--m3);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:6px}
+.wl-del:hover{color:var(--red);background:rgba(220,38,38,.1)}
 
-/* ANALYSIS RESULT */
-.analysis-result{background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:16px;margin-bottom:10px}
-.ar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.ar-title{font-size:12px;color:var(--muted)}
-.ar-value{font-size:13px;font-weight:700}
-.ar-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}
-.ar-row:last-child{border-bottom:none}
-.ar-lbl{color:var(--muted2);display:flex;align-items:center;gap:5px}
-.competitor-item{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}
-.competitor-item:last-child{border-bottom:none}
-.competitor-name{font-weight:600;margin-bottom:2px}
-.competitor-rev{font-size:11px;color:var(--yellow)}
+/* EMPTY STATE */
+.empty{text-align:center;padding:36px 16px;color:var(--m2)}
+.empty-ico{font-size:40px;opacity:.35;margin-bottom:10px}
+.empty-txt{font-size:13px;line-height:1.65}
 
-/* TREND BADGE */
-.trend-up{color:var(--green);font-weight:700}
-.trend-dn{color:var(--red);font-weight:700}
-.trend-st{color:var(--muted);font-weight:700}
+/* CHINA LOG */
+.cn-box{background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.18);border-radius:12px;padding:13px;margin-bottom:10px}
+.cn-title{font-size:10px;font-weight:800;color:#60a5fa;text-transform:uppercase;letter-spacing:.8px;margin-bottom:9px}
+.cn-row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid rgba(37,99,235,.1)}
+.cn-row:last-child{border-bottom:none}
 
-/* SPINNER */
-.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-txt{text-align:center;font-size:13px;color:var(--muted);padding:24px}
+/* NOTICE */
+.notice{background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:11px 13px;font-size:12px;color:var(--m1);line-height:1.6;margin-bottom:12px}
+.notice strong{color:var(--p2)}
 
-/* MODAL ADD NICHE */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-end;justify-content:center;display:none}
-.modal-overlay.open{display:flex}
-.modal{background:var(--surface);border-radius:20px 20px 0 0;padding:20px 16px 32px;width:100%;max-width:500px}
-.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
-.modal-title{font-size:16px;font-weight:800;margin-bottom:16px}
+/* LOADING */
+.loading{text-align:center;padding:28px 16px}
+.spin{width:30px;height:30px;border:3px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 10px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.loading-txt{font-size:13px;color:var(--m2);line-height:1.5}
+.err-box{background:rgba(220,38,38,.07);border:1px solid rgba(220,38,38,.22);border-radius:10px;padding:12px;text-align:center;margin-bottom:10px;font-size:12px;color:#f87171;line-height:1.5}
 
 /* SETTINGS */
-.settings-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.05)}
-.settings-row:last-child{border-bottom:none}
-.settings-lbl{font-size:13px;color:var(--text)}
-.settings-sub{font-size:11px;color:var(--muted);margin-top:2px}
-.settings-val{font-size:13px;color:var(--purple2);font-weight:600}
+.set-row{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.set-row:last-child{border-bottom:none}
+.set-lbl{font-size:14px;font-weight:500}
+.set-sub{font-size:11px;color:var(--m2);margin-top:2px}
+.set-val{font-size:12px;color:var(--p2);font-weight:600;text-align:right}
+.set-val.ok{color:#4ade80}
+.set-val.no{color:var(--m3)}
 
-/* NOTICES */
-.notice{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:14px}
-.notice strong{color:var(--purple2)}
+/* KEY input section */
+.key-section{background:var(--s2);border:1px solid var(--bd);border-radius:11px;padding:13px;margin-top:10px}
+.key-status{font-size:11px;margin-top:6px;font-weight:600}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--s1);border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto}
+.modal-handle{width:36px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 16px}
+.modal-title{font-size:16px;font-weight:800;margin-bottom:16px}
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <div class="hdr">
-  <div class="hdr-title">Marketplace Analyzer</div>
-  <div class="hdr-demo">Демо режим</div>
+  <div class="hdr-name">Marketplace Analyzer</div>
+  <div class="hdr-mode" id="hdr-mode">Демо режим</div>
 </div>
 
-<!-- TABS -->
-<div class="tabs-bar">
-  <div class="tab-item active" data-tab="selection"><div class="tab-icon">🎯</div>Подбор</div>
-  <div class="tab-item" data-tab="trends"><div class="tab-icon">📈</div>Тренды</div>
-  <div class="tab-item" data-tab="analysis"><div class="tab-icon">🔍</div>Анализ</div>
-  <div class="tab-item" data-tab="watchlist"><div class="tab-icon">👁</div>Watchlist</div>
-  <div class="tab-item" data-tab="calculator"><div class="tab-icon">💰</div>Калькулятор</div>
-  <div class="tab-item" data-tab="settings"><div class="tab-icon">⚙️</div>Настройки</div>
+<div class="tabs" id="tabs">
+  <div class="tab on" data-tab="selection"><div class="tab-ico">🎯</div>Подбор</div>
+  <div class="tab" data-tab="trends"><div class="tab-ico">📈</div>Тренды</div>
+  <div class="tab" data-tab="analysis"><div class="tab-ico">🔍</div>Анализ</div>
+  <div class="tab" data-tab="watchlist"><div class="tab-ico">👁</div>Watchlist</div>
+  <div class="tab" data-tab="calc"><div class="tab-ico">💰</div>Калькулятор</div>
+  <div class="tab" data-tab="settings"><div class="tab-ico">⚙️</div>Настройки</div>
 </div>
 
-<div class="main">
+<div class="body">
 
-<!-- ═══ ПОДБОР ═══ -->
-<div class="section active" id="s-selection">
+<!-- ══════════════ ПОДБОР ══════════════ -->
+<div class="pg on" id="pg-selection">
   <div class="card">
-    <div class="card-title">🎯 Подбор ниш</div>
-    <div class="inp-group">
-      <label class="inp-label">Категория или ключевое слово</label>
-      <input class="inp" id="sel-keyword" type="text" placeholder="Например: кухонные аксессуары">
+    <div class="sec-title">🎯 Подбор товара по бюджету</div>
+    <div class="notice">
+      Введи бюджет — найдём товары с <strong>низкой конкуренцией</strong>, <strong>высоким спросом</strong> и <strong>высоким % выкупа</strong>. Получишь предварительную юнит-экономику и ссылку на топ-конкурента на WB.
     </div>
-    <div class="inp-group">
-      <label class="inp-label">Минимальная выручка ниши, ₽</label>
-      <input class="inp" id="sel-min-rev" type="number" placeholder="1 000 000">
+    <div class="inp-g">
+      <label class="lbl">Стартовый бюджет, ₽ *</label>
+      <input class="inp" type="number" id="sel-budget" placeholder="150 000">
     </div>
-    <div class="inp-group">
-      <label class="inp-label">Максимум продавцов</label>
-      <input class="inp" id="sel-max-sellers" type="number" placeholder="50">
-    </div>
-    <button class="btn-grad" onclick="runSelection()">🎯 Найти ниши</button>
-  </div>
-  <div id="selection-result"></div>
-</div>
-
-<!-- ═══ ТРЕНДЫ ═══ -->
-<div class="section" id="s-trends">
-  <div class="card">
-    <div class="card-title">📈 Анализ трендов</div>
-    <div class="notice"><strong>Тренды</strong> — растущие ниши за выбранный период по данным ВБ. В демо-режиме показываем примерные данные.</div>
-    <div class="inp-group">
-      <label class="inp-label">Период</label>
-      <div class="period-row">
-        <button class="period-btn active" data-period="1">1 мес</button>
-        <button class="period-btn" data-period="3">3 мес</button>
-        <button class="period-btn" data-period="6">6 мес</button>
+    <div class="g2">
+      <div class="inp-g">
+        <label class="lbl">Ценовой сегмент, ₽</label>
+        <select class="inp" id="sel-price">
+          <option value="">Любой</option>
+          <option value="low">До 500 ₽</option>
+          <option value="mid">500–2 000 ₽</option>
+          <option value="high">2 000–5 000 ₽</option>
+          <option value="prem">5 000+ ₽</option>
+        </select>
+      </div>
+      <div class="inp-g">
+        <label class="lbl">Категория</label>
+        <select class="inp" id="sel-cat">
+          <option value="">Любая</option>
+          <option>Товары для дома</option>
+          <option>Красота и здоровье</option>
+          <option>Спорт</option>
+          <option>Дети</option>
+          <option>Электроника</option>
+          <option>Одежда</option>
+          <option>Зоотовары</option>
+          <option>Кухня</option>
+          <option>Сад и дача</option>
+          <option>Инструменты</option>
+        </select>
       </div>
     </div>
-    <button class="btn-grad" onclick="runTrends()">📈 Загрузить тренды</button>
+    <div class="g2">
+      <div class="inp-g">
+        <label class="lbl">Мин. % выкупа</label>
+        <input class="inp" type="number" id="sel-buyout" placeholder="65" value="65">
+      </div>
+      <div class="inp-g">
+        <label class="lbl">Макс. продавцов</label>
+        <input class="inp" type="number" id="sel-sellers" placeholder="40" value="40">
+      </div>
+    </div>
+    <button class="btn" onclick="runSelection()" id="btn-sel">🎯 Найти товары</button>
+  </div>
+  <div id="sel-result"></div>
+</div>
+
+<!-- ══════════════ ТРЕНДЫ ══════════════ -->
+<div class="pg" id="pg-trends">
+  <div class="card">
+    <div class="sec-title">📈 Мировые тренды</div>
+    <div class="notice">
+      Анализируем тренды через <strong>AlphaShop Ranking</strong>, <strong>Baidu Index</strong> и <strong>阿里指数 (Alibaba Index)</strong> — видишь, что взрывает продажи в Китае на 1–2 месяца раньше, чем это придёт в Россию.
+    </div>
+    <div class="inp-g">
+      <label class="lbl">Ниша или категория</label>
+      <input class="inp" type="text" id="trend-keyword" placeholder="Например: массажёры, органайзеры, LED свет">
+    </div>
+    <div class="inp-g">
+      <label class="lbl">Источники данных</label>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-top:4px">
+        <label class="tgl-row"><label class="tgl"><input type="checkbox" id="src-alpha" checked><span class="tgl-sl"></span></label><span class="tgl-lbl">🏆 AlphaShop Ranking (что взрывает маркетплейсы)</span></label>
+        <label class="tgl-row"><label class="tgl"><input type="checkbox" id="src-baidu" checked><span class="tgl-sl"></span></label><span class="tgl-lbl">🔴 Baidu Index (поиск в Китае)</span></label>
+        <label class="tgl-row"><label class="tgl"><input type="checkbox" id="src-alibaba" checked><span class="tgl-sl"></span></label><span class="tgl-lbl">🟠 阿里指数 Alibaba Index (спрос/сезонность)</span></label>
+        <label class="tgl-row"><label class="tgl"><input type="checkbox" id="src-google" checked><span class="tgl-sl"></span></label><span class="tgl-lbl">🟢 Google Trends (мировые тренды)</span></label>
+      </div>
+    </div>
+    <button class="btn" onclick="runTrends()" id="btn-trends">📈 Анализировать тренды</button>
   </div>
   <div id="trends-result"></div>
 </div>
 
-<!-- ═══ АНАЛИЗ ═══ -->
-<div class="section" id="s-analysis">
+<!-- ══════════════ АНАЛИЗ НИШИ ══════════════ -->
+<div class="pg" id="pg-analysis">
   <div class="card">
-    <div class="card-title">🔍 Анализ ниши</div>
-    <div class="inp-group">
-      <label class="inp-label">Ключевое слово или категория</label>
-      <input class="inp" id="analysis-keyword" type="text" placeholder="Например: массажные пистолеты">
+    <div class="sec-title">🔍 Анализ ниши</div>
+    <div id="mpstats-warn" class="notice" style="display:none">
+      ⚠️ MPStats API не подключён. Показываем <strong>демо-данные</strong>. Добавь API ключ в Настройках для реального анализа.
     </div>
-    <div class="inp-group">
-      <label class="inp-label">Период</label>
-      <div class="period-row" id="analysis-periods">
-        <button class="period-btn active" data-period="1">1 мес</button>
-        <button class="period-btn" data-period="3">3 мес</button>
-        <button class="period-btn" data-period="6">6 мес</button>
+    <div class="inp-g">
+      <label class="lbl">Ниша / ключевое слово *</label>
+      <input class="inp" type="text" id="an-keyword" placeholder="Например: силиконовые коврики">
+    </div>
+    <div class="inp-g">
+      <label class="lbl">Ссылка на конкурента WB (опционально)</label>
+      <input class="inp" type="url" id="an-competitor" placeholder="https://www.wildberries.ru/catalog/...">
+    </div>
+    <div class="inp-g">
+      <label class="lbl">Период</label>
+      <div class="chips" id="an-periods">
+        <div class="chip on" data-p="1">1 мес</div>
+        <div class="chip" data-p="3">3 мес</div>
+        <div class="chip" data-p="6">6 мес</div>
+        <div class="chip" data-p="12">12 мес</div>
       </div>
     </div>
-    <button class="btn-grad" onclick="runAnalysis()">🔍 Анализировать</button>
+    <button class="btn" onclick="runAnalysis()" id="btn-an">🔍 Анализировать</button>
   </div>
-  <div id="analysis-result"></div>
+  <div id="an-result"></div>
 </div>
 
-<!-- ═══ WATCHLIST ═══ -->
-<div class="section" id="s-watchlist">
+<!-- ══════════════ WATCHLIST ══════════════ -->
+<div class="pg" id="pg-watchlist">
   <div class="card">
-    <div class="card-title">👁 Отслеживаемые ниши</div>
-    <div class="notice"><strong>Бот раз в день</strong> проверяет изменения и пришлёт уведомление при изменении выручки ±10%+, новом крупном игроке или изменении % выкупа.</div>
-    <!-- КНОПКА ДОБАВИТЬ — прямо здесь в Watchlist, не переходит на Анализ -->
-    <button class="btn-grad" onclick="openAddNiche()">➕ Добавить нишу</button>
+    <div class="sec-title">👁 Отслеживаемые ниши</div>
+    <div class="notice"><strong>Автоматическая проверка</strong> раз в день. Уведомление при изменении выручки ±10%+, новом крупном игроке или изменении % выкупа.</div>
+    <button class="btn" onclick="openAddNiche()">➕ Добавить нишу</button>
   </div>
-  <div id="watchlist-items"></div>
+  <div id="wl-list"></div>
 </div>
 
-<!-- ═══ КАЛЬКУЛЯТОР ═══ -->
-<div class="section" id="s-calculator">
+<!-- ══════════════ КАЛЬКУЛЯТОР ══════════════ -->
+<div class="pg" id="pg-calc">
   <div class="card">
-    <div class="card-title">💰 Калькулятор прибыли WB</div>
+    <div class="sec-title">💰 Калькулятор прибыли WB</div>
 
-    <!-- ПАРАМЕТРЫ ТОВАРА -->
-    <div style="font-size:13px;font-weight:700;color:var(--purple2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">Параметры товара</div>
-
-    <div class="inp-group">
-      <label class="inp-label">Категория товара *</label>
-      <select class="inp" id="calc-category" onchange="onCategoryChange()">
+    <!-- Параметры товара -->
+    <div style="font-size:11px;font-weight:800;color:var(--p2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Параметры товара</div>
+    <div class="inp-g">
+      <label class="lbl">Категория *</label>
+      <select class="inp" id="c-cat" onchange="onCatChange()">
         <option value="">— Выберите категорию —</option>
-        <option value="clothes">Одежда / Обувь (34.5%)</option>
-        <option value="cosmetics">Косметика / Парфюмерия (23%)</option>
-        <option value="home">Товары для дома (15%)</option>
-        <option value="electronics">Электроника (10%)</option>
-        <option value="food">Продукты питания (10%)</option>
-        <option value="chemistry">Бытовая химия (29.5%)</option>
-        <option value="auto">Автоаксессуары (26.5%)</option>
-        <option value="sport">Спорт / Туризм (18%)</option>
-        <option value="kids">Детские товары (14%)</option>
-        <option value="pets">Зоотовары (12%)</option>
-        <option value="tools">Инструменты / Строительство (8%)</option>
-        <option value="books">Книги / Канцелярия (8%)</option>
-        <option value="jewelry">Украшения / Бижутерия (20%)</option>
-        <option value="garden">Сад / Огород / Растения (10%)</option>
-        <option value="other">Другое (17%)</option>
+        <option value="clothes">Одежда / Обувь — 34.5%</option>
+        <option value="cosmetics">Косметика / Парфюмерия — 23%</option>
+        <option value="home">Товары для дома — 15%</option>
+        <option value="electronics">Электроника — 10%</option>
+        <option value="food">Продукты питания — 10%</option>
+        <option value="chemistry">Бытовая химия — 29.5%</option>
+        <option value="auto">Автоаксессуары — 26.5%</option>
+        <option value="sport">Спорт / Туризм — 18%</option>
+        <option value="kids">Детские товары — 14%</option>
+        <option value="pets">Зоотовары — 12%</option>
+        <option value="tools">Инструменты — 8%</option>
+        <option value="books">Книги / Канцелярия — 8%</option>
+        <option value="jewelry">Украшения — 20%</option>
+        <option value="garden">Сад / Огород — 10%</option>
+        <option value="other">Другое — 17%</option>
       </select>
-      <div class="inp-hint" id="category-hint">Выберите категорию — покажем комиссию WB</div>
+      <div class="inp-hint" id="cat-hint">Выберите категорию — покажем комиссию WB и ср. статистику</div>
     </div>
-
-    <div class="inp-group">
-      <label class="inp-label">Цена продажи, ₽ *</label>
-      <input class="inp" type="number" id="calc-price" placeholder="0" oninput="liveRecalc()">
+    <div class="inp-g">
+      <label class="lbl">Цена продажи, ₽ *</label>
+      <input class="inp" type="number" id="c-price" placeholder="0">
       <div class="inp-hint" id="avg-price-hint"></div>
     </div>
 
-    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">Габариты товара (с упаковкой)</div>
-    <div class="g3" style="margin-bottom:8px">
-      <div class="inp-group" style="margin-bottom:0">
-        <label class="inp-label">Длина, см</label>
-        <input class="inp" type="number" id="calc-l" placeholder="0" oninput="calcVolume()">
-      </div>
-      <div class="inp-group" style="margin-bottom:0">
-        <label class="inp-label">Ширина, см</label>
-        <input class="inp" type="number" id="calc-w" placeholder="0" oninput="calcVolume()">
-      </div>
-      <div class="inp-group" style="margin-bottom:0">
-        <label class="inp-label">Высота, см</label>
-        <input class="inp" type="number" id="calc-h" placeholder="0" oninput="calcVolume()">
-      </div>
+    <!-- Габариты -->
+    <div style="font-size:11px;font-weight:700;color:var(--m2);margin-bottom:7px">Габариты (с упаковкой)</div>
+    <div class="g3" style="margin-bottom:6px">
+      <div><label class="lbl">Длина, см</label><input class="inp" type="number" id="c-l" placeholder="0" oninput="updateVolume()"></div>
+      <div><label class="lbl">Ширина, см</label><input class="inp" type="number" id="c-w" placeholder="0" oninput="updateVolume()"></div>
+      <div><label class="lbl">Высота, см</label><input class="inp" type="number" id="c-h" placeholder="0" oninput="updateVolume()"></div>
     </div>
-    <div class="inp-hint" id="volume-hint" style="margin-bottom:12px">Объём: — л · Логистика рассчитывается по объёму</div>
+    <div class="inp-hint" id="vol-hint" style="margin-bottom:10px">Объём: — л · логистика рассчитывается по объёму</div>
+    <button class="btn-out btn btn-sm" onclick="fillAvgDims()" style="display:inline-flex;width:auto;margin-bottom:12px">📐 Средние габариты</button>
 
-    <button class="btn-outline" style="margin-top:0;margin-bottom:12px" onclick="fillAvgDims()">📐 Заполнить средние габариты</button>
-
-    <div class="toggle-row" style="margin-bottom:16px">
-      <label class="toggle"><input type="checkbox" id="calc-heavy" onchange="liveRecalc()"><span class="toggle-slider"></span></label>
-      <span class="toggle-label">Товар тяжелее 25 кг</span>
+    <div class="tgl-row" style="margin-bottom:14px">
+      <label class="tgl"><input type="checkbox" id="c-heavy"><span class="tgl-sl"></span></label>
+      <span class="tgl-lbl">Товар тяжелее 25 кг</span>
     </div>
 
-    <!-- МОДЕЛЬ ПРОДАЖ -->
-    <div style="font-size:13px;font-weight:700;color:var(--purple2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">Модель продаж</div>
-    <div class="model-list" id="model-list">
-      <div class="model-cb selected" data-model="fbs" onclick="toggleModel(this)">
-        <div class="cb-box"><span class="cb-check">✓</span></div>
-        <div>
-          <div class="cb-label">Маркетплейс (FBS)</div>
-        </div>
-      </div>
-      <div class="model-cb selected" data-model="fbw" onclick="toggleModel(this)">
-        <div class="cb-box"><span class="cb-check">✓</span></div>
-        <div>
-          <div class="cb-label">Склад WB (FBW)</div>
-        </div>
-      </div>
-      <div class="model-cb" data-model="dbs" onclick="toggleModel(this)">
-        <div class="cb-box"><span class="cb-check">✓</span></div>
-        <div>
-          <div class="cb-label">Доставка силами продавца (DBS)</div>
-        </div>
-      </div>
+    <!-- Модель продаж -->
+    <div style="font-size:11px;font-weight:800;color:var(--p2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Модель продаж</div>
+    <div id="models">
+      <div class="model-item on" data-m="fbs" onclick="toggleModel(this)"><div class="cb">✓</div><span style="font-size:13px;font-weight:600">Маркетплейс (FBS)</span></div>
+      <div class="model-item on" data-m="fbw" onclick="toggleModel(this)"><div class="cb">✓</div><span style="font-size:13px;font-weight:600">Склад WB (FBW)</span></div>
+      <div class="model-item" data-m="dbs" onclick="toggleModel(this)"><div class="cb"></div><span style="font-size:13px;font-weight:600">Доставка силами продавца (DBS)</span></div>
     </div>
 
-    <!-- СКЛАД -->
-    <div style="font-size:13px;font-weight:700;color:var(--purple2);margin:16px 0 10px;text-transform:uppercase;letter-spacing:.5px">Склад хранения</div>
-    <div class="wh-row" id="wh-row">
-      <button class="wh-btn active" data-wh="moscow" onclick="selectWH(this)">Москва</button>
-      <button class="wh-btn" data-wh="krasnodar" onclick="selectWH(this)">Краснодар</button>
-      <button class="wh-btn" data-wh="tula" onclick="selectWH(this)">Тула</button>
+    <!-- Склад -->
+    <div style="font-size:11px;font-weight:800;color:var(--p2);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 10px">Склад хранения</div>
+    <div class="chips" id="wh-chips">
+      <div class="wh-chip on" data-wh="moscow" onclick="selectWH(this)">Москва</div>
+      <div class="wh-chip" data-wh="krasnodar" onclick="selectWH(this)">Краснодар</div>
+      <div class="wh-chip" data-wh="tula" onclick="selectWH(this)">Тула</div>
     </div>
-    <div class="inp-hint" id="logistics-hint" style="margin-top:8px">Логистика WB зависит от объёма и склада</div>
+    <div class="inp-hint" id="log-hint" style="margin-top:7px">Логистика зависит от объёма и склада</div>
 
-    <!-- СТАТИСТИКА -->
-    <div style="font-size:13px;font-weight:700;color:var(--purple2);margin:16px 0 10px;text-transform:uppercase;letter-spacing:.5px">Статистика</div>
+    <!-- Статистика -->
+    <div style="font-size:11px;font-weight:800;color:var(--p2);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 10px">Статистика</div>
     <div class="g2">
-      <div class="inp-group">
-        <label class="inp-label">Оборачиваемость, дни</label>
-        <input class="inp" type="number" id="calc-turnover" placeholder="30" oninput="liveRecalc()">
-        <div class="inp-hint" id="turnover-hint">Ср. по категории: —</div>
-      </div>
-      <div class="inp-group">
-        <label class="inp-label">Доля выкупа, %</label>
-        <input class="inp" type="number" id="calc-buyout" placeholder="70" oninput="liveRecalc()">
-        <div class="inp-hint" id="buyout-hint">Ср. по категории: —</div>
-      </div>
+      <div class="inp-g"><label class="lbl">Оборачиваемость, дней</label><input class="inp" type="number" id="c-turn" placeholder="30"><div class="inp-hint" id="turn-hint"></div></div>
+      <div class="inp-g"><label class="lbl">Доля выкупа, %</label><input class="inp" type="number" id="c-buyout" placeholder="70"><div class="inp-hint" id="buyout-hint"></div></div>
     </div>
 
-    <!-- РАСХОДЫ -->
-    <div style="font-size:13px;font-weight:700;color:var(--purple2);margin:16px 0 10px;text-transform:uppercase;letter-spacing:.5px">Расходы</div>
-
-    <div class="inp-group">
-      <label class="inp-label">Себестоимость товара, ₽</label>
-      <input class="inp" type="number" id="calc-cost" placeholder="0" oninput="liveRecalc()">
+    <!-- Расходы -->
+    <div style="font-size:11px;font-weight:800;color:var(--p2);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 10px">Расходы</div>
+    <div class="inp-g">
+      <label class="lbl">Себестоимость, ₽</label>
+      <input class="inp" type="number" id="c-cost" placeholder="0">
+    </div>
+    <div class="inp-g">
+      <label class="lbl">Реклама, % от цены</label>
+      <div class="inp-sfx"><input class="inp" type="number" id="c-ads-pct" placeholder="10" min="0" max="50"></div>
+      <div class="inp-hint">Процент от цены продажи (обычно 8–15%)</div>
     </div>
 
-    <div class="inp-group">
-      <label class="inp-label">Доля расходов на продвижение, %</label>
-      <input class="inp" type="number" id="calc-promo" placeholder="15" oninput="liveRecalc()">
-    </div>
-
-    <!-- ВИД НАЛОГООБЛОЖЕНИЯ -->
-    <div style="font-size:13px;font-weight:700;color:var(--purple2);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.5px">Вид налогообложения</div>
-    <select class="inp" id="calc-tax-type" style="margin-bottom:10px" onchange="onTaxTypeChange()">
+    <!-- Налог -->
+    <div style="font-size:11px;font-weight:800;color:var(--p2);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 8px">Налогообложение</div>
+    <select class="inp" id="c-tax-type" style="margin-bottom:8px" onchange="changeTaxType()">
       <option value="usn">УСН</option>
       <option value="osn">ОСН</option>
     </select>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Налоговая ставка, %</div>
-    <div class="tax-grid" id="tax-rates">
-      <div class="tax-opt active" data-rate="6" onclick="selectTax(this)">6%</div>
-      <div class="tax-opt" data-rate="15" onclick="selectTax(this)">15%</div>
-      <div class="tax-opt" data-rate="25" onclick="selectTax(this)">25%</div>
+    <div style="font-size:11px;color:var(--m2);margin-bottom:7px">Налоговая ставка</div>
+    <div class="tax-grid" id="tax-opts">
+      <div class="tax-o on" data-r="6" onclick="selTax(this)">6%</div>
+      <div class="tax-o" data-r="15" onclick="selTax(this)">15%</div>
+      <div class="tax-o" data-r="25" onclick="selTax(this)">25%</div>
     </div>
-    <div class="tax-grid2" style="margin-top:8px">
-      <div class="tax-opt" data-rate="custom" onclick="selectTax(this)">Другая</div>
-      <div class="tax-opt" data-rate="0" onclick="selectTax(this)">Не учитывать</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px">
+      <div class="tax-o" data-r="custom" onclick="selTax(this)">Другая</div>
+      <div class="tax-o" data-r="0" onclick="selTax(this)">Не учитывать</div>
     </div>
-    <input class="inp" type="number" id="calc-tax-custom" placeholder="Своя ставка %" style="margin-top:8px;display:none" oninput="liveRecalc()">
+    <input class="inp" type="number" id="c-tax-custom" placeholder="Ставка %" style="margin-top:7px;display:none">
 
-    <!-- РУЧНЫЕ РАСХОДЫ -->
-    <div style="font-size:13px;font-weight:700;color:var(--purple2);margin:16px 0 10px;text-transform:uppercase;letter-spacing:.5px">Ручной ввод расходов</div>
-    <div class="notice">Введите актуальные значения для вашего товара</div>
-    <div class="card" style="padding:12px;margin-bottom:0">
-      <div class="expense-row">
-        <div><div class="expense-lbl">Реклама, ₽/шт</div></div>
-        <input class="expense-inp" type="number" id="exp-ads" value="120" oninput="liveRecalc()">
-      </div>
-      <div class="expense-row">
-        <div><div class="expense-lbl">Налог УСН 6%, ₽/шт</div></div>
-        <input class="expense-inp" type="number" id="exp-tax" value="48" oninput="liveRecalc()">
-      </div>
-      <div class="expense-row">
-        <div><div class="expense-lbl">Фулфилмент, ₽/шт</div></div>
-        <input class="expense-inp" type="number" id="exp-fulfill" value="50" oninput="liveRecalc()">
-      </div>
-      <div class="expense-row">
-        <div><div class="expense-lbl">Прочие расходы, ₽/шт</div></div>
-        <input class="expense-inp" type="number" id="exp-other" value="46" oninput="liveRecalc()">
-      </div>
+    <!-- Ручные расходы -->
+    <div style="font-size:11px;font-weight:800;color:var(--p2);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 10px">Ручной ввод расходов, ₽/шт</div>
+    <div class="card" style="padding:11px;margin-bottom:0">
+      <div class="exp-row"><span class="exp-lbl">Налог УСН 6%, ₽</span><input class="exp-inp" type="number" id="ex-tax" value="48"></div>
+      <div class="exp-row"><span class="exp-lbl">Фулфилмент, ₽</span><input class="exp-inp" type="number" id="ex-ff" value="50"></div>
+      <div class="exp-row"><span class="exp-lbl">Прочие, ₽</span><input class="exp-inp" type="number" id="ex-other" value="46"></div>
     </div>
 
-    <button class="btn-grad" onclick="calcProfit()">💰 Рассчитать прибыль</button>
+    <button class="btn" onclick="calcProfit()">💰 Рассчитать прибыль</button>
   </div>
-
-  <!-- RESULTS -->
   <div id="calc-result"></div>
 </div>
 
-<!-- ═══ НАСТРОЙКИ ═══ -->
-<div class="section" id="s-settings">
+<!-- ══════════════ НАСТРОЙКИ ══════════════ -->
+<div class="pg" id="pg-settings">
   <div class="card">
-    <div class="card-title">⚙️ Настройки</div>
-    <div class="settings-row">
-      <div><div class="settings-lbl">API Wildberries</div><div class="settings-sub">Для реальных данных</div></div>
-      <div class="settings-val">Не подключён</div>
+    <div class="sec-title">⚙️ Настройки</div>
+
+    <!-- MPStats -->
+    <div class="set-row">
+      <div>
+        <div class="set-lbl">MPStats API</div>
+        <div class="set-sub">Анализ ниш, конкурентов, спроса</div>
+      </div>
+      <div class="set-val" id="mpstats-status">Не подключён</div>
     </div>
-    <div class="settings-row">
-      <div><div class="settings-lbl">Claude AI ключ</div><div class="settings-sub">Для аналитики</div></div>
-      <div class="settings-val">—</div>
+    <div class="key-section">
+      <label class="lbl">MPStats API ключ</label>
+      <input class="inp" type="password" id="mpstats-key" placeholder="Вставьте токен из mpstats.io → API">
+      <div class="inp-hint">Получить ключ: mpstats.io → Профиль → API токены</div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-sm" style="flex:1;margin-top:0" onclick="saveMPStats()">Сохранить</button>
+        <button class="btn btn-sm btn-out" style="flex:1;margin-top:0" onclick="testMPStats()">Проверить</button>
+      </div>
+      <div class="key-status" id="mpstats-msg"></div>
     </div>
-    <div class="settings-row">
-      <div><div class="settings-lbl">Telegram уведомления</div><div class="settings-sub">При изменении ниш</div></div>
-      <label class="toggle" style="flex-shrink:0"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+
+    <!-- Claude для трендов -->
+    <div class="set-row" style="margin-top:12px">
+      <div>
+        <div class="set-lbl">Claude API (для трендов)</div>
+        <div class="set-sub">AlphaShop / Baidu / Alibaba / Google</div>
+      </div>
+      <div class="set-val" id="claude-status">Не подключён</div>
     </div>
-    <div class="settings-row">
-      <div><div class="settings-lbl">Режим работы</div><div class="settings-sub">Текущий режим</div></div>
-      <div class="settings-val">Демо</div>
+    <div class="key-section">
+      <label class="lbl">Claude API ключ</label>
+      <input class="inp" type="password" id="claude-key" placeholder="sk-ant-api03-...">
+      <div class="inp-hint">Получить: console.anthropic.com → API Keys</div>
+      <button class="btn btn-sm" style="margin-top:10px" onclick="saveClaude()">Сохранить</button>
+      <div class="key-status" id="claude-msg"></div>
     </div>
   </div>
 </div>
 
-</div><!-- /main -->
+</div><!-- /body -->
 
 <!-- MODAL: Добавить нишу -->
-<div class="modal-overlay" id="modal-add">
+<div class="overlay" id="modal-wl">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Добавить нишу в Watchlist</div>
-    <div class="inp-group">
-      <label class="inp-label">Название ниши / ключевое слово</label>
-      <input class="inp" id="modal-niche-name" type="text" placeholder="Например: силиконовые лопатки">
-    </div>
-    <div class="inp-group">
-      <label class="inp-label">Текущая выручка ниши, ₽ (опционально)</label>
-      <input class="inp" id="modal-niche-rev" type="number" placeholder="0">
-    </div>
-    <div class="inp-group">
-      <label class="inp-label">% выкупа (опционально)</label>
-      <input class="inp" id="modal-niche-buyout" type="number" placeholder="70">
-    </div>
-    <button class="btn-grad" onclick="addNicheToWatchlist()">✅ Добавить</button>
-    <button class="btn-outline" onclick="closeModal()">Отмена</button>
+    <div class="inp-g"><label class="lbl">Название ниши *</label><input class="inp" id="wl-name" placeholder="Например: силиконовые лопатки"></div>
+    <div class="inp-g"><label class="lbl">Выручка ниши, ₽ (опц.)</label><input class="inp" type="number" id="wl-rev" placeholder="0"></div>
+    <div class="inp-g"><label class="lbl">% выкупа (опц.)</label><input class="inp" type="number" id="wl-buyout" placeholder="70"></div>
+    <button class="btn" onclick="addNiche()">✅ Добавить</button>
+    <button class="btn btn-out" onclick="closeModal()">Отмена</button>
   </div>
 </div>
 
 <script>
-// ══════════════════════════════════════════
-//  STATE
-// ══════════════════════════════════════════
+// ══════════════════════════════════════════════════
+//  CONFIG & STATE
+// ══════════════════════════════════════════════════
+const CLAUDE_URL = 'https://api.anthropic.com/v1/messages';
+const MPSTATS_URL = 'https://mpstats.io/api/wb/get';
+
+let mpKey = localStorage.getItem('mpa_mp') || '';
+let clKey = localStorage.getItem('mpa_cl') || '';
 let watchlist = [];
-try { watchlist = JSON.parse(localStorage.getItem('mpa_watchlist') || '[]'); } catch(e){}
+let selWH = 'moscow';
+let selTaxRate = 6;
+let anPeriod = 1;
 
-let selectedPeriod = 1;
-let selectedTrendPeriod = 1;
-let selectedWH = 'moscow';
-let selectedTaxRate = 6;
+try { watchlist = JSON.parse(localStorage.getItem('mpa_wl') || '[]'); } catch(e){}
 
-// Данные по категориям
-const CATEGORIES = {
-  clothes:    {name:'Одежда / Обувь',          commission:34.5, avgPrice:2200, turnover:25, buyout:55},
-  cosmetics:  {name:'Косметика / Парфюмерия',  commission:23,   avgPrice:800,  turnover:20, buyout:75},
-  home:       {name:'Товары для дома',          commission:15,   avgPrice:900,  turnover:22, buyout:72},
-  electronics:{name:'Электроника',             commission:10,   avgPrice:3500, turnover:18, buyout:85},
-  food:       {name:'Продукты питания',         commission:10,   avgPrice:400,  turnover:12, buyout:90},
-  chemistry:  {name:'Бытовая химия',            commission:29.5, avgPrice:350,  turnover:15, buyout:80},
-  auto:       {name:'Автоаксессуары',           commission:26.5, avgPrice:1200, turnover:30, buyout:70},
-  sport:      {name:'Спорт / Туризм',           commission:18,   avgPrice:1500, turnover:28, buyout:68},
-  kids:       {name:'Детские товары',           commission:14,   avgPrice:700,  turnover:20, buyout:78},
-  pets:       {name:'Зоотовары',               commission:12,   avgPrice:500,  turnover:16, buyout:82},
-  tools:      {name:'Инструменты',             commission:8,    avgPrice:1800, turnover:35, buyout:75},
-  books:      {name:'Книги / Канцелярия',       commission:8,    avgPrice:350,  turnover:20, buyout:88},
-  jewelry:    {name:'Украшения / Бижутерия',   commission:20,   avgPrice:1100, turnover:28, buyout:62},
-  garden:     {name:'Сад / Огород',            commission:10,   avgPrice:600,  turnover:30, buyout:73},
-  other:      {name:'Другое',                  commission:17,   avgPrice:1000, turnover:25, buyout:70},
+// Categories
+const CATS = {
+  clothes:    {name:'Одежда',        c:34.5, avgP:2200, turn:25, bo:55},
+  cosmetics:  {name:'Косметика',     c:23,   avgP:800,  turn:20, bo:75},
+  home:       {name:'Дом',           c:15,   avgP:900,  turn:22, bo:72},
+  electronics:{name:'Электроника',   c:10,   avgP:3500, turn:18, bo:85},
+  food:       {name:'Продукты',      c:10,   avgP:400,  turn:12, bo:90},
+  chemistry:  {name:'Бытхимия',      c:29.5, avgP:350,  turn:15, bo:80},
+  auto:       {name:'Автоаксессуары',c:26.5, avgP:1200, turn:30, bo:70},
+  sport:      {name:'Спорт',         c:18,   avgP:1500, turn:28, bo:68},
+  kids:       {name:'Детское',       c:14,   avgP:700,  turn:20, bo:78},
+  pets:       {name:'Зоо',           c:12,   avgP:500,  turn:16, bo:82},
+  tools:      {name:'Инструменты',   c:8,    avgP:1800, turn:35, bo:75},
+  books:      {name:'Книги',         c:8,    avgP:350,  turn:20, bo:88},
+  jewelry:    {name:'Украшения',     c:20,   avgP:1100, turn:28, bo:62},
+  garden:     {name:'Сад',           c:10,   avgP:600,  turn:30, bo:73},
+  other:      {name:'Другое',        c:17,   avgP:1000, turn:25, bo:70},
 };
 
-// Логистика WB 2025 (актуальные тарифы с 15.09.2025)
-// До 1л: градация по объёму
-// Более 1л: 46₽ первый литр + 14₽ каждый доп.
-// Коэффициент склада: Москва ≈1.0, Краснодар ≈1.15, Тула ≈1.1
-const WH_COEFF = {moscow:1.0, krasnodar:1.15, tula:1.1};
+// WB logistics 2025 (post 15.09.2025)
+const WH_C = {moscow:1.0, krasnodar:1.15, tula:1.1};
+function calcLog(l,w,h,wh){
+  const v=(l*w*h)/1000;
+  if(!v||v<=0)return{v:0,p:0};
+  let b=v<=0.2?v*23:v<=0.4?v*26:v<=0.6?v*29:v<=0.8?v*30:v<=1?v*32:46+(v-1)*14;
+  return{v:Math.round(v*100)/100,p:Math.round(b*WH_C[wh]*10)/10};
+}
+function whName(w){return{moscow:'Москва',krasnodar:'Краснодар',tula:'Тула'}[w]}
 
-function calcWBLogistics(l, w, h, warehouse) {
-  const vol = (l * w * h) / 1000; // литры
-  if (!vol || vol <= 0) return {vol:0, price:0};
-  let base;
-  if (vol <= 0.2)       base = vol * 23;
-  else if (vol <= 0.4)  base = vol * 26;
-  else if (vol <= 0.6)  base = vol * 29;
-  else if (vol <= 0.8)  base = vol * 30;
-  else if (vol <= 1.0)  base = vol * 32;
-  else                  base = 46 + (vol - 1) * 14;
-  return {vol: Math.round(vol * 100) / 100, price: Math.round(base * WH_COEFF[warehouse] * 10) / 10};
+// China logistics
+const CN_RATE=34800;
+function calcCN(l,w,h,qty){
+  const vm3=(l*w*h)/1e6;
+  if(!vm3)return null;
+  const per=Math.round(vm3*CN_RATE);
+  const tv=vm3*qty;
+  const rate=tv>3?CN_RATE*.85:tv>1?CN_RATE*.9:CN_RATE;
+  return{per,perBulk:Math.round(vm3*rate),total:Math.round(tv*rate),tv};
 }
 
-// Логистика Китай → Россия (средние данные за 2025)
-// Авто: ~440$/куб (сборные) или 2.5$/кг
-// Жд: ~300-350$/куб
-// Среднее: ~380$/куб ≈ 34 800₽/куб при курсе ~90₽/$
-// На 1 шт: объём_шт_в_куб * 34800
-const CHINA_RATE_PER_CBM = 34800; // ₽ за 1 м³
-const CHINA_RATE_PER_KG  = 230;   // ₽/кг (альтернатива)
+// ══════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════
+initSettings();
+renderWL();
+showMPStatsWarn();
 
-function calcChinaLogistics(l, w, h, qty) {
-  const vol_per_item_m3 = (l * w * h) / 1000000; // м³
-  if (!vol_per_item_m3 || vol_per_item_m3 <= 0) return null;
-  const per_item = Math.round(vol_per_item_m3 * CHINA_RATE_PER_CBM);
-  const total_vol = vol_per_item_m3 * qty;
-  // Скидка за объём: >1 куб = -10%, >3 куб = -15%
-  let rate = CHINA_RATE_PER_CBM;
-  if (total_vol > 3) rate *= 0.85;
-  else if (total_vol > 1) rate *= 0.9;
-  const per_item_bulk = Math.round(vol_per_item_m3 * rate);
-  const total = Math.round(total_vol * rate);
-  return {per_item, per_item_bulk, total, vol_per_item: vol_per_item_m3, total_vol};
-}
-
-// ══════════════════════════════════════════
-//  TABS
-// ══════════════════════════════════════════
-document.querySelectorAll('.tab-item').forEach(t => {
-  t.addEventListener('click', () => {
-    document.querySelectorAll('.tab-item').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.section').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    document.getElementById('s-' + t.dataset.tab).classList.add('active');
-    if (t.dataset.tab === 'watchlist') renderWatchlist();
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.pg').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');
+    document.getElementById('pg-'+t.dataset.tab).classList.add('on');
+    if(t.dataset.tab==='watchlist')renderWL();
   });
 });
 
-// Period buttons
-document.querySelectorAll('.period-btn').forEach(b => {
-  b.addEventListener('click', () => {
-    b.closest('.period-row').querySelectorAll('.period-btn').forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
-    selectedPeriod = +b.dataset.period;
+document.querySelectorAll('#an-periods .chip').forEach(c=>{
+  c.addEventListener('click',()=>{
+    document.querySelectorAll('#an-periods .chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on');
+    anPeriod=+c.dataset.p;
   });
 });
 
-// ══════════════════════════════════════════
-//  SELECTION
-// ══════════════════════════════════════════
-function runSelection() {
-  const kw = document.getElementById('sel-keyword').value.trim();
-  const el = document.getElementById('selection-result');
-  if (!kw) { el.innerHTML = '<div class="notice">Введите ключевое слово</div>'; return; }
-  el.innerHTML = `<div class="loading-txt"><div class="spinner"></div>Ищем ниши для «${kw}»...</div>`;
-  setTimeout(() => {
-    const niches = generateDemoNiches(kw);
-    el.innerHTML = niches.map(n => `
-      <div class="analysis-result">
-        <div class="ar-header"><span style="font-size:15px;font-weight:800">${n.name}</span><span class="trend-${n.trend==='Рост'?'up':n.trend==='Падение'?'dn':'st'}">▲ ${n.trend}</span></div>
-        <div class="ar-row"><span class="ar-lbl">💰 Выручка ниши</span><span class="ar-value">${fmtNum(n.revenue)} ₽</span></div>
-        <div class="ar-row"><span class="ar-lbl">👥 Продавцов</span><span class="ar-value">${n.sellers}</span></div>
-        <div class="ar-row"><span class="ar-lbl">🔄 % выкупа</span><span class="ar-value">${n.buyout}%</span></div>
-        <div class="ar-row" style="border:none"><span class="ar-lbl">📦 Ср. цена</span><span class="ar-value">${fmtNum(n.avgPrice)} ₽</span></div>
-        <button class="btn-outline" style="margin-top:8px" onclick="addToWatchlistDirect('${n.name}', ${n.revenue}, ${n.buyout})">+ В Watchlist</button>
-      </div>`).join('');
-  }, 1200);
-}
-
-function generateDemoNiches(kw) {
-  const base = Math.round(Math.random() * 50000000 + 5000000);
-  return [
-    {name: kw, revenue: base, sellers: Math.round(Math.random()*80+10), buyout: Math.round(Math.random()*30+55), avgPrice: Math.round(Math.random()*2000+300), trend:'Рост'},
-    {name: kw + ' оптом', revenue: Math.round(base*0.6), sellers: Math.round(Math.random()*30+5), buyout: Math.round(Math.random()*20+60), avgPrice: Math.round(Math.random()*1500+200), trend:'Стабильно'},
-    {name: 'Премиум ' + kw, revenue: Math.round(base*0.3), sellers: Math.round(Math.random()*15+3), buyout: Math.round(Math.random()*15+65), avgPrice: Math.round(Math.random()*3000+800), trend:'Рост'},
-  ];
-}
-
-// ══════════════════════════════════════════
-//  TRENDS
-// ══════════════════════════════════════════
-function runTrends() {
-  const el = document.getElementById('trends-result');
-  el.innerHTML = `<div class="loading-txt"><div class="spinner"></div>Загружаем тренды...</div>`;
-  setTimeout(() => {
-    const trending = [
-      {name:'Силиконовые коврики', growth:'+34%', revenue:18500000, sellers:22, trend:'up'},
-      {name:'Умные весы', growth:'+28%', revenue:24000000, sellers:31, trend:'up'},
-      {name:'Органайзеры для дома', growth:'+22%', revenue:15600000, sellers:45, trend:'up'},
-      {name:'Кухонные аксессуары', growth:'+19%', revenue:31200000, sellers:68, trend:'up'},
-      {name:'Средства для уборки', growth:'+17%', revenue:22800000, sellers:39, trend:'up'},
-      {name:'Детские игрушки STEM', growth:'+15%', revenue:12400000, sellers:27, trend:'up'},
-    ];
-    el.innerHTML = `<div style="font-size:11px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Топ растущих ниш · за ${selectedPeriod} мес</div>` +
-      trending.map((t,i) => `
-        <div class="analysis-result" style="margin-bottom:8px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="font-size:14px;font-weight:700">${i+1}. ${t.name}</div>
-            <span class="trend-up" style="font-size:16px;font-weight:800">${t.growth}</span>
-          </div>
-          <div style="display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--muted)">
-            <span>💰 ${fmtNum(t.revenue)} ₽</span><span>👥 ${t.sellers} продавцов</span>
-          </div>
-          <button class="btn-outline" style="margin-top:8px;font-size:12px;padding:7px" onclick="addToWatchlistDirect('${t.name}', ${t.revenue}, 72)">+ В Watchlist</button>
-        </div>`).join('');
-  }, 1000);
-}
-
-// ══════════════════════════════════════════
-//  ANALYSIS
-// ══════════════════════════════════════════
-function runAnalysis() {
-  const kw = document.getElementById('analysis-keyword').value.trim();
-  const el = document.getElementById('analysis-result');
-  if (!kw) { el.innerHTML = '<div class="notice">Введите ключевое слово</div>'; return; }
-  el.innerHTML = `<div class="loading-txt"><div class="spinner"></div>Анализируем «${kw}»...<br><span style="font-size:11px;opacity:.6">Демо-результат (API недоступен)</span></div>`;
-  setTimeout(() => {
-    const rev = Math.round(Math.random()*40000000 + 8000000);
-    const sellers = Math.round(Math.random()*60+10);
-    const buyout = Math.round(Math.random()*25+58);
-    const competitors = [
-      {name: kw + ' Premium Pro 5 режимов', rev: Math.round(rev*0.18)},
-      {name: kw + ' Standard Plus', rev: Math.round(rev*0.13)},
-      {name: kw + ' Light Edition', rev: Math.round(rev*0.11)},
-      {name: kw + ' Basic Set', rev: Math.round(rev*0.09)},
-      {name: kw + ' Mini Compact', rev: Math.round(rev*0.07)},
-    ];
-    el.innerHTML = `
-      <div class="analysis-result">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Результат: «${kw}» · ${selectedPeriod} мес</div>
-        <div class="ar-row"><span class="ar-lbl">💰 Выручка ниши</span><span class="ar-value">${fmtNum(rev)} ₽</span></div>
-        <div class="ar-row"><span class="ar-lbl">👥 Продавцов</span><span class="ar-value">${sellers}</span></div>
-        <div class="ar-row"><span class="ar-lbl">🔄 % выкупа</span><span class="ar-value">${buyout}%</span></div>
-        <div class="ar-row"><span class="ar-lbl">📈 Тренд</span><span class="trend-up">▲ Рост</span></div>
-        <div style="font-size:12px;font-weight:700;color:var(--purple2);margin:12px 0 8px">Топ-5 конкурентов</div>
-        ${competitors.map((c,i) => `<div class="competitor-item"><div class="competitor-name">${i+1}. ${c.name}</div><div class="competitor-rev">${fmtNum(c.rev)} ₽</div></div>`).join('')}
-        <button class="btn-outline" style="margin-top:10px" onclick="addToWatchlistDirect('${kw}', ${rev}, ${buyout})">+ Добавить в Watchlist</button>
-      </div>`;
-  }, 1400);
-}
-
-// ══════════════════════════════════════════
-//  WATCHLIST
-// ══════════════════════════════════════════
-function openAddNiche() {
-  document.getElementById('modal-niche-name').value = '';
-  document.getElementById('modal-niche-rev').value = '';
-  document.getElementById('modal-niche-buyout').value = '';
-  document.getElementById('modal-add').classList.add('open');
-  setTimeout(() => document.getElementById('modal-niche-name').focus(), 100);
-}
-function closeModal() {
-  document.getElementById('modal-add').classList.remove('open');
-}
-document.getElementById('modal-add').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeModal();
+document.getElementById('modal-wl').addEventListener('click',e=>{
+  if(e.target===e.currentTarget)closeModal();
 });
 
-function addNicheToWatchlist() {
-  const name = document.getElementById('modal-niche-name').value.trim();
-  if (!name) { alert('Введите название ниши'); return; }
-  const rev = +document.getElementById('modal-niche-rev').value || 0;
-  const buyout = +document.getElementById('modal-niche-buyout').value || 0;
-  addToWatchlistDirect(name, rev, buyout);
-  closeModal();
-}
+function fmt(n){return Math.round(n).toLocaleString('ru-RU');}
 
-function addToWatchlistDirect(name, rev, buyout) {
-  if (watchlist.find(w => w.name === name)) {
-    alert('Эта ниша уже в Watchlist'); return;
+function initSettings(){
+  if(mpKey){
+    document.getElementById('mpstats-key').value='••••••••••';
+    document.getElementById('mpstats-status').textContent='Подключён';
+    document.getElementById('mpstats-status').className='set-val ok';
+    document.getElementById('hdr-mode').textContent='MPStats подключён';
+    document.getElementById('hdr-mode').style.color='#4ade80';
   }
-  watchlist.push({id: Date.now(), name, revenue: rev, buyout, added: new Date().toLocaleDateString('ru')});
-  try { localStorage.setItem('mpa_watchlist', JSON.stringify(watchlist)); } catch(e){}
-  renderWatchlist();
-  // Switch to watchlist tab
-  document.querySelectorAll('.tab-item').forEach(t => t.classList.toggle('active', t.dataset.tab==='watchlist'));
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.getElementById('s-watchlist').classList.add('active');
+  if(clKey){
+    document.getElementById('claude-key').value='••••••••••';
+    document.getElementById('claude-status').textContent='Подключён';
+    document.getElementById('claude-status').className='set-val ok';
+  }
+}
+function showMPStatsWarn(){
+  document.getElementById('mpstats-warn').style.display=mpKey?'none':'block';
 }
 
-function removeFromWatchlist(id) {
-  watchlist = watchlist.filter(w => w.id !== id);
-  try { localStorage.setItem('mpa_watchlist', JSON.stringify(watchlist)); } catch(e){}
-  renderWatchlist();
+// ══════════════════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════════════════
+function saveMPStats(){
+  const v=document.getElementById('mpstats-key').value.trim();
+  if(!v||v.startsWith('•'))return;
+  mpKey=v; localStorage.setItem('mpa_mp',v);
+  document.getElementById('mpstats-key').value='••••••••••';
+  document.getElementById('mpstats-status').textContent='Подключён';
+  document.getElementById('mpstats-status').className='set-val ok';
+  document.getElementById('mpstats-msg').textContent='✅ Сохранён';
+  document.getElementById('mpstats-msg').style.color='#4ade80';
+  document.getElementById('hdr-mode').textContent='MPStats подключён';
+  document.getElementById('hdr-mode').style.color='#4ade80';
+  showMPStatsWarn();
+}
+function saveClaude(){
+  const v=document.getElementById('claude-key').value.trim();
+  if(!v||v.startsWith('•'))return;
+  clKey=v; localStorage.setItem('mpa_cl',v);
+  document.getElementById('claude-key').value='••••••••••';
+  document.getElementById('claude-status').textContent='Подключён';
+  document.getElementById('claude-status').className='set-val ok';
+  document.getElementById('claude-msg').textContent='✅ Сохранён';
+  document.getElementById('claude-msg').style.color='#4ade80';
+}
+async function testMPStats(){
+  const msg=document.getElementById('mpstats-msg');
+  msg.textContent='⏳ Проверяем...'; msg.style.color='var(--m1)';
+  try{
+    const r=await fetch('https://mpstats.io/api/wb/get/keywords?path=category&d1=2025-01-01&d2=2025-01-07&path=Электроника',{headers:{'X-Mpstats-TOKEN':mpKey,'Content-Type':'application/json'}});
+    if(r.status===200||r.status===400){msg.textContent='✅ API работает';msg.style.color='#4ade80';}
+    else if(r.status===401){msg.textContent='❌ Неверный ключ';msg.style.color='#f87171';}
+    else{msg.textContent=`⚠️ Статус ${r.status}`;msg.style.color='#fbbf24';}
+  }catch(e){msg.textContent='❌ Ошибка подключения';msg.style.color='#f87171';}
 }
 
-function renderWatchlist() {
-  const el = document.getElementById('watchlist-items');
-  if (!watchlist.length) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-txt">Нет отслеживаемых ниш.<br>Добавьте нишу кнопкой выше<br>или из результатов анализа.</div></div>`;
+// ══════════════════════════════════════════════════
+//  CLAUDE API HELPER
+// ══════════════════════════════════════════════════
+async function askClaude(prompt, useWebSearch=false){
+  if(!clKey)return null;
+  const body={model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]};
+  if(useWebSearch)body.tools=[{type:'web_search_20250305',name:'web_search'}];
+  const r=await fetch(CLAUDE_URL,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':clKey,'anthropic-version':'2023-06-01'},body:JSON.stringify(body)});
+  const d=await r.json();
+  return d.content?.filter(c=>c.type==='text').map(c=>c.text).join('')||null;
+}
+
+// ══════════════════════════════════════════════════
+//  MPSTATS API HELPER
+// ══════════════════════════════════════════════════
+async function mpstatsRequest(endpoint, params={}){
+  if(!mpKey)return null;
+  const url=new URL(`https://mpstats.io/api/wb/get/${endpoint}`);
+  Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v));
+  try{
+    const r=await fetch(url,{headers:{'X-Mpstats-TOKEN':mpKey,'Content-Type':'application/json'}});
+    if(!r.ok)return null;
+    return await r.json();
+  }catch(e){return null;}
+}
+
+// ══════════════════════════════════════════════════
+//  ПОДБОР
+// ══════════════════════════════════════════════════
+async function runSelection(){
+  const budget=+document.getElementById('sel-budget').value;
+  const buyoutMin=+document.getElementById('sel-buyout').value||65;
+  const sellersMax=+document.getElementById('sel-sellers').value||40;
+  const priceRange=document.getElementById('sel-price').value;
+  const cat=document.getElementById('sel-cat').value;
+  const el=document.getElementById('sel-result');
+  const btn=document.getElementById('btn-sel');
+
+  if(!budget){el.innerHTML='<div class="err-box">Укажи стартовый бюджет</div>';return;}
+  btn.disabled=true; btn.textContent='⏳ Ищем...';
+  el.innerHTML=`<div class="loading"><div class="spin"></div><div class="loading-txt">Анализируем рынок...<br>${mpKey?'Запрос к MPStats API':'Демо-режим'}</div></div>`;
+
+  // Определяем ценовой сегмент по бюджету
+  let priceMin=0,priceMax=99999;
+  if(priceRange==='low'){priceMin=100;priceMax=500;}
+  else if(priceRange==='mid'){priceMin=500;priceMax=2000;}
+  else if(priceRange==='high'){priceMin=2000;priceMax=5000;}
+  else if(priceRange==='prem'){priceMin=5000;priceMax=99999;}
+  else{// авто по бюджету
+    if(budget<50000){priceMin=300;priceMax=1500;}
+    else if(budget<200000){priceMin=500;priceMax=3000;}
+    else{priceMin=1000;priceMax=8000;}
+  }
+
+  let products=[];
+
+  // Попытка через MPStats
+  if(mpKey){
+    const today=new Date();
+    const d2=today.toISOString().split('T')[0];
+    const d1=new Date(today-30*86400000).toISOString().split('T')[0];
+    const data=await mpstatsRequest('items',{
+      d1,d2,
+      category:cat||'Товары для дома',
+      priceMin,priceMax,
+      sellersMax,
+      sort:'revenue',
+      order:'desc',
+      limit:20
+    });
+    if(data&&data.data){
+      products=data.data
+        .filter(p=>p.buyout_percent>=buyoutMin&&p.sellers_count<=sellersMax)
+        .slice(0,5)
+        .map(p=>({
+          name:p.name||'Товар',
+          price:p.price||1000,
+          revenue:p.revenue||5000000,
+          sellers:p.sellers_count||20,
+          buyout:p.buyout_percent||70,
+          sales:p.sales||500,
+          avgSales:p.sales_per_day||17,
+          competition:'Низкая',
+          wb_id:p.id||null,
+          real:true
+        }));
+    }
+  }
+
+  // Демо если нет MPStats или нет результатов
+  if(!products.length){
+    const demos=[
+      {name:'Силиконовый коврик для разделки'+(!cat?'':`(${cat})`),price:Math.round((priceMin+priceMax)/2*0.8)||890,revenue:12400000,sellers:18,buyout:78,sales:620,avgSales:21,competition:'Низкая',wb_id:'155432891',real:false},
+      {name:'Органайзер для кухонных принадлежностей',price:Math.round((priceMin+priceMax)/2)||1290,revenue:8700000,sellers:22,buyout:74,sales:410,avgSales:14,competition:'Средняя',wb_id:'187654321',real:false},
+      {name:'Диспенсер для жидкого мыла сенсорный',price:Math.round((priceMin+priceMax)/2*1.2)||1490,revenue:6500000,sellers:15,buyout:81,sales:290,avgSales:10,competition:'Низкая',wb_id:'198765432',real:false},
+    ];
+    products=demos.filter(d=>d.price>=priceMin&&d.price<=priceMax&&budget/d.price>=50);
+    if(!products.length)products=demos;
+  }
+
+  btn.disabled=false; btn.textContent='🎯 Найти товары';
+
+  if(!products.length){el.innerHTML='<div class="err-box">По заданным критериям ничего не найдено. Попробуйте расширить параметры.</div>';return;}
+
+  el.innerHTML=products.map(p=>{
+    const qty=Math.floor(budget/p.price);
+    const catKey=Object.keys(CATS).find(k=>CATS[k].name.toLowerCase().includes((cat||'дом').substring(0,3).toLowerCase()))||'home';
+    const commission=CATS[catKey].c;
+    const log=calcLog(25,20,15,'moscow');
+    const commRub=Math.round(p.price*commission/100);
+    const cost=Math.round(p.price*0.35);
+    const adsRub=Math.round(p.price*0.1);
+    const expenses=cost+commRub+log.p+adsRub+50+46+48;
+    const profit=p.price-expenses;
+    const margin=Math.round(profit/p.price*100);
+    const profColor=margin>20?'#4ade80':margin>10?'#fbbf24':'#f87171';
+    const compColor=p.competition==='Низкая'?'tag-g':p.competition==='Средняя'?'tag-y':'tag-r';
+    const wbUrl=p.wb_id?`https://www.wildberries.ru/catalog/${p.wb_id}/detail.aspx`:`https://www.wildberries.ru/catalog/0/search.aspx?search=${encodeURIComponent(p.name)}`;
+
+    return`<div class="prod-card">
+      <div class="prod-name">${p.real?'📊':'🔮'} ${p.name}</div>
+      ${!p.real?'<div style="font-size:10px;color:var(--m3);margin-top:-4px;margin-bottom:8px">Демо · подключи MPStats для реальных данных</div>':''}
+      <div class="prod-meta">
+        <span class="tag ${compColor}">Конкуренция: ${p.competition}</span>
+        <span class="tag tag-b">Выкуп: ${p.buyout}%</span>
+        <span class="tag tag-p">${p.sellers} продавцов</span>
+      </div>
+      <div class="prod-metrics">
+        <div class="pm-box"><div class="pm-val">${fmt(p.price)} ₽</div><div class="pm-lbl">Цена</div></div>
+        <div class="pm-box"><div class="pm-val">${fmt(p.revenue/1e6,1)} млн</div><div class="pm-lbl">Выручка/мес</div></div>
+        <div class="pm-box"><div class="pm-val" style="color:${profColor}">${margin}%</div><div class="pm-lbl">Маржа</div></div>
+      </div>
+      <div class="res-card" style="margin-bottom:10px">
+        <div class="res-hdr">Предварительная юнит-экономика</div>
+        <div class="res-row"><span class="res-lbl">Цена продажи</span><span class="res-val">${fmt(p.price)} ₽</span></div>
+        <div class="res-row"><span class="res-lbl">Себестоимость (~35%)</span><span class="res-val r">−${fmt(cost)} ₽</span></div>
+        <div class="res-row"><span class="res-lbl">Комиссия WB (${commission}%)</span><span class="res-val r">−${fmt(commRub)} ₽</span></div>
+        <div class="res-row"><span class="res-lbl">Логистика WB (~${log.v}л)</span><span class="res-val r">−${fmt(log.p)} ₽</span></div>
+        <div class="res-row"><span class="res-lbl">Реклама (10%)</span><span class="res-val r">−${fmt(adsRub)} ₽</span></div>
+        <div class="res-row"><span class="res-lbl">Прочие</span><span class="res-val r">−${48+50+46} ₽</span></div>
+        <div class="res-row" style="border-top:1px solid var(--bd2);margin-top:4px;padding-top:8px"><span style="font-weight:700">Прибыль</span><span style="font-weight:800;color:${profColor}">${profit>0?'+':''}${fmt(profit)} ₽</span></div>
+      </div>
+      <div style="font-size:12px;color:var(--m2);margin-bottom:6px">При бюджете ${fmt(budget)} ₽ → закупить <strong style="color:var(--txt)">${qty} шт</strong></div>
+      <a class="wb-link" href="${wbUrl}" target="_blank">🔗 Топ-конкурент на Wildberries</a>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════
+//  ТРЕНДЫ
+// ══════════════════════════════════════════════════
+async function runTrends(){
+  const kw=document.getElementById('trend-keyword').value.trim();
+  const useAlpha=document.getElementById('src-alpha').checked;
+  const useBaidu=document.getElementById('src-baidu').checked;
+  const useAlibaba=document.getElementById('src-alibaba').checked;
+  const useGoogle=document.getElementById('src-google').checked;
+  const el=document.getElementById('trends-result');
+  const btn=document.getElementById('btn-trends');
+
+  if(!kw){el.innerHTML='<div class="err-box">Введите нишу для анализа</div>';return;}
+
+  btn.disabled=true; btn.textContent='⏳ Анализируем...';
+  el.innerHTML=`<div class="loading"><div class="spin"></div><div class="loading-txt">Ищем тренды в китайских источниках...<br>AlphaShop · Baidu · Alibaba · Google</div></div>`;
+
+  const sources=[];
+  if(useAlpha)sources.push('AlphaShop Ranking (alphashop.cn/ranking)');
+  if(useBaidu)sources.push('Baidu Index (index.baidu.com)');
+  if(useAlibaba)sources.push('阿里指数 Alibaba Index (alizs.taobao.com)');
+  if(useGoogle)sources.push('Google Trends');
+
+  let result=null;
+
+  if(clKey){
+    const prompt=`Ты аналитик маркетплейсов. Проведи анализ трендов для ниши "${kw}" на российских маркетплейсах (WB, Ozon).
+
+Используй веб-поиск для получения актуальных данных из этих источников:
+${sources.join('\n')}
+
+Найди:
+1. Текущие тренды спроса на товары в нише "${kw}" на китайских маркетплейсах и в поиске
+2. Динамику (рост/падение/стабильно) за последние 3 месяца
+3. Прогноз: какие товары из Китая придут в Россию через 1-2 месяца
+4. Сезонность — когда пик спроса
+5. Конкретные топ-3 товара которые сейчас взрываются продажи в Китае
+
+Отвечай ТОЛЬКО JSON без markdown:
+[{
+  "source": "AlphaShop"|"Baidu Index"|"Alibaba Index"|"Google Trends",
+  "title": "Название тренда (конкретный товар или ниша)",
+  "trend": "up"|"down"|"stable",
+  "growth": "+45% за 3 мес",
+  "body": "Описание 2-3 предложения что происходит с трендом и почему",
+  "forecast": "Прогноз для России",
+  "peak": "Пик спроса: месяц/сезон",
+  "growth_pct": 45
+}]`;
+    try{
+      const txt=await askClaude(prompt,true);
+      if(txt){
+        const arr=JSON.parse(txt.replace(/```json|```/g,'').trim());
+        result=arr;
+      }
+    }catch(e){}
+  }
+
+  btn.disabled=false; btn.textContent='📈 Анализировать тренды';
+
+  // Demo если нет Claude или ошибка
+  if(!result){
+    result=[
+      {source:'AlphaShop',title:`${kw} - Новые модели 2025`,trend:'up',growth:'+62% за 2 мес',body:`Ниша "${kw}" показывает взрывной рост на китайских маркетплейсах. Продавцы фиксируют рост заказов и новых поставщиков.`,forecast:'Ожидается волна товаров на WB через 4-6 недель',peak:'Пик: апрель–июнь',growth_pct:62},
+      {source:'Baidu Index',title:`Запросы по "${kw}" в Китае`,trend:'up',growth:'+38% за месяц',body:'Объём поиска в Baidu стремительно растёт. Потребители активно ищут новые модели и сравнивают характеристики.',forecast:'Аналогичный рост на российском рынке через 6-8 недель',peak:'Пик: апрель–май',growth_pct:38},
+      {source:'Alibaba Index',title:`${kw} — спрос и сезонность`,trend:'stable',growth:'+12% стабильный рост',body:'Alibaba Index показывает устойчивый спрос с умеренным ростом. Хорошая база для стабильного бизнеса.',forecast:'Стабильный спрос на WB весь год',peak:'Равномерный спрос',growth_pct:12},
+      {source:'Google Trends',title:`Мировые тренды: ${kw}`,trend:'up',growth:'+29% мировой рост',body:'Google Trends подтверждает мировой интерес к нише. Рост наблюдается в Европе, США и Азии.',forecast:'Устойчивый спрос на российском рынке',peak:'Пик: март–июнь',growth_pct:29},
+    ].filter((_,i)=>[useAlpha,useBaidu,useAlibaba,useGoogle][i]);
+
+    if(!result.length)result=[{source:'Google Trends',title:kw,trend:'up',growth:'+25%',body:'Анализируем тренды...',forecast:'',peak:'',growth_pct:25}];
+    el.innerHTML='<div class="notice">⚠️ Демо-данные. Подключи <strong>Claude API</strong> в Настройках для реального анализа трендов из AlphaShop, Baidu и Alibaba.</div>'+renderTrends(result);
     return;
   }
-  el.innerHTML = watchlist.map(w => `
-    <div class="watch-card">
-      <button class="watch-del" onclick="removeFromWatchlist(${w.id})">🗑</button>
-      <div class="watch-name">👁 ${w.name}</div>
-      <div class="watch-meta">Добавлено ${w.added}</div>
-      <div class="watch-tags">
-        ${w.revenue ? `<span class="watch-tag" style="background:rgba(245,158,11,.12);color:var(--yellow)">💰 ${fmtNum(w.revenue)} ₽</span>` : ''}
-        ${w.buyout ? `<span class="watch-tag" style="background:rgba(34,197,94,.12);color:var(--green)">🔄 ${w.buyout}% выкупа</span>` : ''}
+
+  el.innerHTML=renderTrends(result);
+}
+
+function renderTrends(arr){
+  const srcClass={AlphaShop:'src-alpha','Baidu Index':'src-baidu','Alibaba Index':'src-alibaba','Google Trends':'src-google'};
+  const trendIco={up:'📈',down:'📉',stable:'➡️'};
+  const trendTxt={up:'Рост',down:'Падение',stable:'Стабильно'};
+  return arr.map(t=>`
+    <div class="trend-card">
+      <div class="trend-src">
+        <span class="src-badge ${srcClass[t.source]||'src-google'}">${t.source}</span>
+        <span class="tst ${t.trend==='up'?'up':t.trend==='down'?'dn':'nt'}">${trendIco[t.trend]} ${trendTxt[t.trend]}</span>
+        ${t.growth?`<span class="tst ${t.trend==='up'?'up':'nt'}">${t.growth}</span>`:''}
+      </div>
+      <div class="trend-title">${t.title}</div>
+      <div class="trend-body">${t.body}</div>
+      ${t.forecast?`<div class="trend-body" style="margin-top:6px;color:var(--p2)">🇷🇺 ${t.forecast}</div>`:''}
+      ${t.peak?`<div class="trend-body" style="margin-top:4px;color:var(--ylw)">📅 ${t.peak}</div>`:''}
+      ${t.growth_pct?`<div class="mb" style="margin-top:10px"><div class="mb-fill" style="width:${Math.min(100,t.growth_pct)}%;background:${t.trend==='up'?'#4ade80':t.trend==='down'?'#f87171':'#fbbf24'}"></div></div>`:''}
+      <button class="btn btn-sm btn-out" style="margin-top:8px" onclick="addToWLDirect('${t.title}',0,0)">+ В Watchlist</button>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════
+//  АНАЛИЗ НИШИ
+// ══════════════════════════════════════════════════
+async function runAnalysis(){
+  const kw=document.getElementById('an-keyword').value.trim();
+  const competitor=document.getElementById('an-competitor').value.trim();
+  const el=document.getElementById('an-result');
+  const btn=document.getElementById('btn-an');
+
+  if(!kw){el.innerHTML='<div class="err-box">Введите ключевое слово</div>';return;}
+  btn.disabled=true; btn.textContent='⏳ Анализируем...';
+
+  el.innerHTML=`<div class="loading"><div class="spin"></div><div class="loading-txt">Запрос к MPStats...<br>${kw}</div></div>`;
+
+  let data=null;
+  const today=new Date();
+  const d2=today.toISOString().split('T')[0];
+  const d1=new Date(today-anPeriod*30*86400000).toISOString().split('T')[0];
+
+  if(mpKey){
+    // Запрос данных ниши
+    data=await mpstatsRequest('keywords/by_words/all',{words:kw,d1,d2});
+  }
+
+  btn.disabled=false; btn.textContent='🔍 Анализировать';
+
+  // Строим результат
+  let revenue, sellers, buyout, sales, avgPrice, trend, seasonality;
+
+  if(data&&data.data&&data.data.length){
+    const d=data.data[0];
+    revenue=d.revenue||0; sellers=d.sellers||0; buyout=d.buyout_percent||70;
+    sales=d.sales||0; avgPrice=d.price||1000; trend=d.trend||'stable';
+    seasonality=d.seasonality||null;
+  } else {
+    // Демо
+    revenue=Math.round(Math.random()*50000000+5000000);
+    sellers=Math.round(Math.random()*60+8);
+    buyout=Math.round(Math.random()*25+58);
+    sales=Math.round(Math.random()*2000+200);
+    avgPrice=Math.round(Math.random()*2000+400);
+    trend='up';
+    seasonality=[65,55,70,85,90,75,60,55,70,80,95,100];
+  }
+
+  const months=['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  const seasonH=seasonality||[60,55,65,80,90,75,60,55,70,80,95,100];
+  const maxS=Math.max(...seasonH);
+  const competition=sellers<15?'Низкая':sellers<35?'Средняя':'Высокая';
+  const compColor=sellers<15?'#4ade80':sellers<35?'#fbbf24':'#f87171';
+
+  let competitorBlock='';
+  if(competitor){
+    const wbId=competitor.match(/catalog\/(\d+)/)?.[1];
+    competitorBlock=`<div class="an-card">
+      <div class="sec-title" style="margin-bottom:10px">🏆 Анализ конкурента</div>
+      ${wbId?`<a class="wb-link" href="https://www.wildberries.ru/catalog/${wbId}/detail.aspx" target="_blank">🔗 Открыть карточку конкурента</a>`:''}
+      <div class="an-row" style="margin-top:8px"><span class="an-lbl">Ссылка</span><span class="an-val" style="font-size:11px;word-break:break-all">${competitor.substring(0,50)}...</span></div>
+      <div class="notice" style="margin-top:8px;margin-bottom:0">Для детального анализа конкурента (продажи, выручка, динамика) подключите MPStats API</div>
+    </div>`;
+  }
+
+  el.innerHTML=`
+  ${!mpKey?'<div class="notice">⚠️ Демо-данные. Подключите MPStats API для реального анализа.</div>':'' }
+
+  <div class="an-card">
+    <div class="sec-title" style="margin-bottom:10px">📊 Ниша: ${kw}</div>
+    <div class="an-row"><span class="an-lbl">💰 Выручка ниши</span><span class="an-val">${fmt(revenue)} ₽</span></div>
+    <div class="an-row"><span class="an-lbl">👥 Продавцов</span><span class="an-val">${sellers}</span></div>
+    <div class="an-row"><span class="an-lbl">🔄 % выкупа</span><span class="an-val">${buyout}%</span></div>
+    <div class="an-row"><span class="an-lbl">📦 Продаж за период</span><span class="an-val">${fmt(sales)} шт</span></div>
+    <div class="an-row"><span class="an-lbl">💵 Средняя цена</span><span class="an-val">${fmt(avgPrice)} ₽</span></div>
+    <div class="an-row"><span class="an-lbl">📈 Тренд</span><span class="an-val">${trend==='up'?'▲ Рост':trend==='down'?'▼ Падение':'→ Стабильно'}</span></div>
+    <div class="an-row"><span class="an-lbl">⚔️ Конкуренция</span><span class="an-val" style="color:${compColor}">${competition}</span></div>
+  </div>
+
+  <div class="an-card">
+    <div class="sec-title" style="margin-bottom:12px">📅 Сезонность спроса</div>
+    <div class="season-bar">
+      <div class="s-months">
+        ${seasonH.map((v,i)=>`
+          <div class="s-month">
+            <div class="s-bar-wrap">
+              <div class="s-bar-fill" style="height:${Math.round(v/maxS*36)}px;width:100%;background:${v/maxS>0.8?'#4ade80':v/maxS>0.5?'#fbbf24':'#6b7280'}"></div>
+            </div>
+            <div class="s-bar-lbl">${months[i]}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--m2);margin-top:8px">
+      Пик: ${months[seasonH.indexOf(maxS)]} · Минимум: ${months[seasonH.indexOf(Math.min(...seasonH))]}
+    </div>
+  </div>
+
+  ${competitorBlock}
+
+  <button class="btn btn-out" onclick="addToWLDirect('${kw}',${revenue},${buyout})">+ Добавить в Watchlist</button>`;
+}
+
+// ══════════════════════════════════════════════════
+//  WATCHLIST
+// ══════════════════════════════════════════════════
+function openAddNiche(){
+  document.getElementById('wl-name').value='';
+  document.getElementById('wl-rev').value='';
+  document.getElementById('wl-buyout').value='';
+  document.getElementById('modal-wl').classList.add('open');
+  setTimeout(()=>document.getElementById('wl-name').focus(),100);
+}
+function closeModal(){document.getElementById('modal-wl').classList.remove('open');}
+function addNiche(){
+  const n=document.getElementById('wl-name').value.trim();
+  if(!n){alert('Введите название');return;}
+  addToWLDirect(n,+document.getElementById('wl-rev').value,+document.getElementById('wl-buyout').value);
+  closeModal();
+}
+function addToWLDirect(name,rev,buyout){
+  if(watchlist.find(w=>w.name===name)){alert('Уже в Watchlist');return;}
+  watchlist.push({id:Date.now(),name,revenue:rev,buyout,added:new Date().toLocaleDateString('ru')});
+  try{localStorage.setItem('mpa_wl',JSON.stringify(watchlist));}catch(e){}
+  renderWL();
+  // Switch to watchlist
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.tab==='watchlist'));
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.getElementById('pg-watchlist').classList.add('on');
+}
+function removeWL(id){
+  watchlist=watchlist.filter(w=>w.id!==id);
+  try{localStorage.setItem('mpa_wl',JSON.stringify(watchlist));}catch(e){}
+  renderWL();
+}
+function renderWL(){
+  const el=document.getElementById('wl-list');
+  if(!watchlist.length){
+    el.innerHTML=`<div class="empty"><div class="empty-ico">📋</div><div class="empty-txt">Нет отслеживаемых ниш.<br>Добавьте из Анализа, Трендов или Подбора.<br>Или нажмите «Добавить нишу» выше.</div></div>`;
+    return;
+  }
+  el.innerHTML=watchlist.map(w=>`
+    <div class="wl-card">
+      <button class="wl-del" onclick="removeWL(${w.id})">🗑</button>
+      <div class="wl-name">👁 ${w.name}</div>
+      <div class="wl-meta">Добавлено ${w.added}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${w.revenue?`<span class="tag tag-y">💰 ${fmt(w.revenue)} ₽</span>`:''}
+        ${w.buyout?`<span class="tag tag-g">🔄 ${w.buyout}%</span>`:''}
       </div>
     </div>`).join('');
 }
-renderWatchlist();
 
-// ══════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  CALCULATOR
-// ══════════════════════════════════════════
-function onCategoryChange() {
-  const cat = document.getElementById('calc-category').value;
-  const hint = document.getElementById('category-hint');
-  const avgHint = document.getElementById('avg-price-hint');
-  const tHint = document.getElementById('turnover-hint');
-  const bHint = document.getElementById('buyout-hint');
-  if (cat && CATEGORIES[cat]) {
-    const c = CATEGORIES[cat];
-    hint.textContent = `Комиссия WB: ${c.commission}% (${cat==='clothes'?'FBW, зафиксировано до 30.04.2026':'актуальная ставка'})`;
-    hint.style.color = 'var(--purple2)';
-    avgHint.textContent = `Средняя цена в категории: ${fmtNum(c.avgPrice)} ₽`;
-    tHint.textContent = `Ср. по категории: ${c.turnover} дней`;
-    bHint.textContent = `Ср. по категории: ${c.buyout}%`;
-    // Автозаполнение оборачиваемости и выкупа если пусто
-    if (!document.getElementById('calc-turnover').value)
-      document.getElementById('calc-turnover').value = c.turnover;
-    if (!document.getElementById('calc-buyout').value)
-      document.getElementById('calc-buyout').value = c.buyout;
-  } else {
-    hint.textContent = 'Выберите категорию — покажем комиссию WB';
-    hint.style.color = '';
-    avgHint.textContent = '';
+// ══════════════════════════════════════════════════
+function onCatChange(){
+  const cat=document.getElementById('c-cat').value;
+  if(!cat)return;
+  const c=CATS[cat];
+  document.getElementById('cat-hint').textContent=`Комиссия WB: ${c.c}% · Ср. цена: ${fmt(c.avgP)} ₽`;
+  document.getElementById('cat-hint').style.color='var(--p2)';
+  document.getElementById('avg-price-hint').textContent=`Средняя в категории: ${fmt(c.avgP)} ₽`;
+  document.getElementById('turn-hint').textContent=`Ср.: ${c.turn} дней`;
+  document.getElementById('buyout-hint').textContent=`Ср.: ${c.bo}%`;
+  if(!document.getElementById('c-turn').value)document.getElementById('c-turn').value=c.turn;
+  if(!document.getElementById('c-buyout').value)document.getElementById('c-buyout').value=c.bo;
+}
+function updateVolume(){
+  const l=+document.getElementById('c-l').value;
+  const w=+document.getElementById('c-w').value;
+  const h=+document.getElementById('c-h').value;
+  if(l&&w&&h){
+    const log=calcLog(l,w,h,selWH);
+    document.getElementById('vol-hint').textContent=`Объём: ${log.v} л · Логистика (${whName(selWH)}): ${log.p} ₽/шт`;
+    document.getElementById('vol-hint').style.color='var(--p2)';
+    document.getElementById('log-hint').textContent=`WB Логистика: Москва ${calcLog(l,w,h,'moscow').p}₽ · Краснодар ${calcLog(l,w,h,'krasnodar').p}₽ · Тула ${calcLog(l,w,h,'tula').p}₽`;
   }
-  liveRecalc();
+}
+function fillAvgDims(){
+  const cat=document.getElementById('c-cat').value;
+  const d={clothes:[30,25,5],cosmetics:[15,10,8],home:[25,20,15],electronics:[20,15,10],food:[20,15,10],chemistry:[30,20,15],auto:[25,20,10],sport:[30,25,20],kids:[25,20,15],pets:[20,15,10],tools:[30,20,15],books:[22,15,3],jewelry:[12,8,5],garden:[30,25,20],other:[20,15,10]};
+  const dims=cat&&d[cat]?d[cat]:[20,15,10];
+  document.getElementById('c-l').value=dims[0];
+  document.getElementById('c-w').value=dims[1];
+  document.getElementById('c-h').value=dims[2];
+  updateVolume();
+}
+function selectWH(btn){
+  document.querySelectorAll('.wh-chip').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  selWH=btn.dataset.wh;
+  updateVolume();
+}
+function toggleModel(el){el.classList.toggle('on');el.querySelector('.cb').textContent=el.classList.contains('on')?'✓':'';}
+function changeTaxType(){
+  const t=document.getElementById('c-tax-type').value;
+  const g=document.getElementById('tax-opts');
+  if(t==='osn'){g.innerHTML=`<div class="tax-o" data-r="13" onclick="selTax(this)">13%</div><div class="tax-o on" data-r="20" onclick="selTax(this)">20%</div><div class="tax-o" data-r="25" onclick="selTax(this)">25%</div>`;selTaxRate=20;}
+  else{g.innerHTML=`<div class="tax-o on" data-r="6" onclick="selTax(this)">6%</div><div class="tax-o" data-r="15" onclick="selTax(this)">15%</div><div class="tax-o" data-r="25" onclick="selTax(this)">25%</div>`;selTaxRate=6;}
+}
+function selTax(el){
+  document.querySelectorAll('.tax-o').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  const ci=document.getElementById('c-tax-custom');
+  if(el.dataset.r==='custom'){ci.style.display='block';selTaxRate=+ci.value||0;}
+  else{ci.style.display='none';selTaxRate=+el.dataset.r;}
 }
 
-function calcVolume() {
-  const l = +document.getElementById('calc-l').value;
-  const w = +document.getElementById('calc-w').value;
-  const h = +document.getElementById('calc-h').value;
-  const hint = document.getElementById('volume-hint');
-  const lHint = document.getElementById('logistics-hint');
-  if (l && w && h) {
-    const log = calcWBLogistics(l, w, h, selectedWH);
-    hint.textContent = `Объём: ${log.vol} л · ${getLogisticsFormula(l, w, h)}`;
-    hint.style.color = 'var(--purple2)';
-    lHint.textContent = `Логистика WB (${getWHName(selectedWH)}): ~${log.price} ₽/шт`;
-    lHint.style.color = 'var(--yellow)';
-  } else {
-    hint.textContent = 'Объём: — л · Логистика рассчитывается по объёму';
-    hint.style.color = '';
-  }
-  liveRecalc();
-}
+function calcProfit(){
+  const cat=document.getElementById('c-cat').value;
+  const price=+document.getElementById('c-price').value;
+  const cost=+document.getElementById('c-cost').value;
+  const adsPct=+document.getElementById('c-ads-pct').value||10;
+  const buyout=+document.getElementById('c-buyout').value||70;
+  const l=+document.getElementById('c-l').value||20;
+  const w=+document.getElementById('c-w').value||15;
+  const h=+document.getElementById('c-h').value||10;
+  const isHeavy=document.getElementById('c-heavy').checked;
+  const exTax=+document.getElementById('ex-tax').value||0;
+  const exFF=+document.getElementById('ex-ff').value||0;
+  const exOther=+document.getElementById('ex-other').value||0;
 
-function getLogisticsFormula(l, w, h) {
-  const vol = (l * w * h) / 1000;
-  if (vol <= 1) return `до 1 л → ${Math.round(vol*31)} ₽ (базовая ставка)`;
-  return `>${vol.toFixed(1)} л → 46₽ + ${(vol-1).toFixed(1)}×14₽`;
-}
+  if(!cat){alert('Выберите категорию');return;}
+  if(!price){alert('Укажите цену продажи');return;}
 
-function getWHName(wh) {
-  return {moscow:'Москва', krasnodar:'Краснодар', tula:'Тула'}[wh];
-}
+  const c=CATS[cat];
+  const commRub=Math.round(price*c.c/100);
+  const log=calcLog(l,w,h,selWH);
+  const wbLog=isHeavy?Math.min(3000,Math.max(1000,log.p*2)):log.p;
+  const revLog=50;
+  const effLog=wbLog+revLog*(1-buyout/100);
+  const adsRub=Math.round(price*adsPct/100);
+  const taxRub=selTaxRate>0?Math.round(price*selTaxRate/100):0;
+  const totalExp=cost+commRub+effLog+adsRub+(exTax||taxRub)+exFF+exOther;
+  const profit=price-totalExp;
+  const margin=price>0?Math.round(profit/price*100):0;
+  const roi=cost>0?Math.round(profit/cost*100):0;
+  const profColor=margin>25?'#4ade80':margin>10?'#fbbf24':'#f87171';
+  const cn=calcCN(l,w,h,100);
+  const el=document.getElementById('calc-result');
 
-function fillAvgDims() {
-  const cat = document.getElementById('calc-category').value;
-  // Средние габариты по категориям (приблизительные)
-  const dims = {
-    clothes:[30,25,5], cosmetics:[15,10,8], home:[25,20,15],
-    electronics:[20,15,10], food:[20,15,10], chemistry:[30,20,15],
-    auto:[25,20,10], sport:[30,25,20], kids:[25,20,15],
-    pets:[20,15,10], tools:[30,20,15], books:[22,15,3],
-    jewelry:[12,8,5], garden:[30,25,20], other:[20,15,10]
-  };
-  const d = cat && dims[cat] ? dims[cat] : [20,15,10];
-  document.getElementById('calc-l').value = d[0];
-  document.getElementById('calc-w').value = d[1];
-  document.getElementById('calc-h').value = d[2];
-  calcVolume();
-}
+  el.innerHTML=`
+  <div class="res-card">
+    <div class="res-hdr">💰 Юнит-экономика · ${c.name}</div>
+    <div class="profit-num" style="color:${profColor}">${profit>0?'+':''}${fmt(profit)} ₽</div>
+    <div style="font-size:12px;color:var(--m2);text-align:center;margin-bottom:8px">прибыль с 1 шт</div>
+    <div class="mb"><div class="mb-fill" style="width:${Math.max(0,Math.min(100,margin))}%;background:${profColor}"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--m2)"><span>Маржа: <strong style="color:${profColor}">${margin}%</strong></span><span>ROI: <strong style="color:${profColor}">${roi}%</strong></span></div>
+  </div>
 
-function selectWH(btn) {
-  document.querySelectorAll('.wh-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  selectedWH = btn.dataset.wh;
-  calcVolume();
-}
-
-function toggleModel(el) {
-  el.classList.toggle('selected');
-}
-
-function onTaxTypeChange() {
-  const type = document.getElementById('calc-tax-type').value;
-  const ratesEl = document.getElementById('tax-rates');
-  if (type === 'osn') {
-    ratesEl.innerHTML = `
-      <div class="tax-opt" data-rate="13" onclick="selectTax(this)">13%</div>
-      <div class="tax-opt active" data-rate="20" onclick="selectTax(this)">20%</div>
-      <div class="tax-opt" data-rate="25" onclick="selectTax(this)">25%</div>`;
-    selectedTaxRate = 20;
-  } else {
-    ratesEl.innerHTML = `
-      <div class="tax-opt active" data-rate="6" onclick="selectTax(this)">6%</div>
-      <div class="tax-opt" data-rate="15" onclick="selectTax(this)">15%</div>
-      <div class="tax-opt" data-rate="25" onclick="selectTax(this)">25%</div>`;
-    selectedTaxRate = 6;
-  }
-  liveRecalc();
-}
-
-function selectTax(el) {
-  document.querySelectorAll('.tax-opt').forEach(x => x.classList.remove('active'));
-  el.classList.add('active');
-  const custom = document.getElementById('calc-tax-custom');
-  if (el.dataset.rate === 'custom') {
-    custom.style.display = 'block';
-    selectedTaxRate = +custom.value || 0;
-  } else {
-    custom.style.display = 'none';
-    selectedTaxRate = +el.dataset.rate;
-  }
-  liveRecalc();
-}
-
-function liveRecalc() {
-  // Just update volume display on dimension change
-  calcVolume();
-}
-
-function calcProfit() {
-  const cat = document.getElementById('calc-category').value;
-  const price = +document.getElementById('calc-price').value;
-  const cost = +document.getElementById('calc-cost').value;
-  const promo = +document.getElementById('calc-promo').value || 0;
-  const buyout = +document.getElementById('calc-buyout').value || 70;
-  const l = +document.getElementById('calc-l').value || 20;
-  const w = +document.getElementById('calc-w').value || 15;
-  const h = +document.getElementById('calc-h').value || 10;
-  const qty = 100; // расчёт на 100 шт для партийной логистики
-  const isHeavy = document.getElementById('calc-heavy').checked;
-
-  // Ручные расходы
-  const expAds      = +document.getElementById('exp-ads').value || 0;
-  const expTax      = +document.getElementById('exp-tax').value || 0;
-  const expFulfill  = +document.getElementById('exp-fulfill').value || 0;
-  const expOther    = +document.getElementById('exp-other').value || 0;
-
-  if (!cat) { alert('Выберите категорию товара'); return; }
-  if (!price) { alert('Укажите цену продажи'); return; }
-
-  const c = CATEGORIES[cat];
-  const commission = c.commission / 100;
-  const commissionRub = Math.round(price * commission);
-
-  // Логистика WB
-  const log = calcWBLogistics(l, w, h, selectedWH);
-  const wbLogistics = isHeavy ? Math.min(3000, Math.max(1000, log.price * 2)) : log.price;
-
-  // Обратная логистика (при не выкупе): 50₽ на склад ВБ
-  const reverseLog = 50;
-  // Эффективная логистика с учётом % выкупа
-  const buyoutRate = buyout / 100;
-  const effectiveLog = wbLogistics + reverseLog * (1 - buyoutRate);
-
-  // Комиссия на продвижение
-  const promoRub = Math.round(price * promo / 100);
-
-  // Налог с оборота
-  const taxRub = selectedTaxRate > 0 ? Math.round(price * selectedTaxRate / 100) : 0;
-
-  // Итого расходы
-  const totalExpenses = cost + commissionRub + effectiveLog + promoRub + expAds + expFulfill + expOther + (expTax || taxRub);
-  const profit = price - totalExpenses;
-  const margin = price > 0 ? Math.round(profit / price * 100) : 0;
-  const roi = cost > 0 ? Math.round(profit / cost * 100) : 0;
-
-  // Логистика Китай
-  const chinaLog = calcChinaLogistics(l, w, h, qty);
-
-  const el = document.getElementById('calc-result');
-
-  const marginColor = margin > 25 ? 'var(--green)' : margin > 10 ? 'var(--yellow)' : 'var(--red)';
-  const marginFill = Math.max(0, Math.min(100, margin));
-
-  el.innerHTML = `
-    <!-- ИТОГ -->
-    <div class="result-card">
-      <div class="result-title">📊 Юнит-экономика · ${c.name}</div>
-      <div class="profit-big" style="color:${marginColor}">${profit > 0 ? '+' : ''}${fmtNum(profit)} ₽</div>
-      <div style="font-size:13px;text-align:center;color:var(--muted);margin-bottom:8px">прибыль с 1 шт</div>
-      <div class="margin-bar"><div class="margin-fill" style="width:${marginFill}%;background:${marginColor}"></div></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)">
-        <span>Маржа: <strong style="color:${marginColor}">${margin}%</strong></span>
-        <span>ROI: <strong style="color:${marginColor}">${roi}%</strong></span>
-      </div>
+  <div class="res-card">
+    <div class="res-hdr">💸 Расходы</div>
+    <div class="res-row"><span class="res-lbl">Цена продажи</span><span class="res-val">${fmt(price)} ₽</span></div>
+    <div class="res-row"><span class="res-lbl">− Себестоимость</span><span class="res-val r">−${fmt(cost)} ₽</span></div>
+    <div class="res-row"><span class="res-lbl">− Комиссия WB (${c.c}%)</span><span class="res-val r">−${fmt(commRub)} ₽</span></div>
+    <div class="res-row"><span class="res-lbl">− Логистика WB (${log.v}л, ${whName(selWH)})</span><span class="res-val r">−${fmt(Math.round(effLog))} ₽</span></div>
+    <div class="res-row"><span class="res-lbl">− Реклама (${adsPct}%)</span><span class="res-val r">−${fmt(adsRub)} ₽</span></div>
+    <div class="res-row"><span class="res-lbl">− Налог (ручн.)</span><span class="res-val r">−${fmt(exTax||taxRub)} ₽</span></div>
+    <div class="res-row"><span class="res-lbl">− Фулфилмент</span><span class="res-val r">−${fmt(exFF)} ₽</span></div>
+    <div class="res-row"><span class="res-lbl">− Прочие</span><span class="res-val r">−${fmt(exOther)} ₽</span></div>
+    <div style="display:flex;justify-content:space-between;padding:10px 0 0;font-size:14px;font-weight:800;border-top:1px solid var(--bd2);margin-top:4px">
+      <span>Итог</span><span style="color:${profColor}">${profit>0?'+':''}${fmt(profit)} ₽</span>
     </div>
+  </div>
 
-    <!-- РАСХОДЫ ДЕТАЛЬНО -->
-    <div class="result-card">
-      <div class="result-title">💸 Расходы на единицу товара</div>
-      <div class="result-row"><span class="result-lbl">Цена продажи</span><span class="result-val">${fmtNum(price)} ₽</span></div>
-      <div class="result-row"><span class="result-lbl">— Себестоимость</span><span class="result-val red">−${fmtNum(cost)} ₽</span></div>
-      <div class="result-row"><span class="result-lbl">— Комиссия WB (${c.commission}%)</span><span class="result-val red">−${fmtNum(commissionRub)} ₽</span></div>
-      <div class="result-row"><span class="result-lbl">— Логистика WB (${log.vol}л, ${getWHName(selectedWH)})</span><span class="result-val red">−${fmtNum(Math.round(effectiveLog))} ₽</span></div>
-      ${promo ? `<div class="result-row"><span class="result-lbl">— Продвижение (${promo}%)</span><span class="result-val red">−${fmtNum(promoRub)} ₽</span></div>` : ''}
-      <div class="result-row"><span class="result-lbl">— Реклама (ручн.)</span><span class="result-val red">−${fmtNum(expAds)} ₽</span></div>
-      <div class="result-row"><span class="result-lbl">— Фулфилмент (ручн.)</span><span class="result-val red">−${fmtNum(expFulfill)} ₽</span></div>
-      <div class="result-row"><span class="result-lbl">— Налог (ручн. или авто)</span><span class="result-val red">−${fmtNum(expTax||taxRub)} ₽</span></div>
-      <div class="result-row"><span class="result-lbl">— Прочие (ручн.)</span><span class="result-val red">−${fmtNum(expOther)} ₽</span></div>
-      <div class="result-total">
-        <span>Прибыль / шт</span>
-        <span style="color:${marginColor}">${profit > 0 ? '+' : ''}${fmtNum(profit)} ₽</span>
-      </div>
+  <div class="res-card">
+    <div class="res-hdr">🏭 Логистика по складам (${log.v}л)</div>
+    ${['moscow','krasnodar','tula'].map(wh=>{const lg=calcLog(l,w,h,wh);return`<div class="res-row"><span class="res-lbl">${whName(wh)}</span><span class="res-val ${wh===selWH?'y':''}">${lg.p} ₽ ${wh===selWH?'← выбран':''}</span></div>`;}).join('')}
+    <div class="inp-hint" style="margin-top:6px">Обратная логистика (невыкуп): 50 ₽/шт</div>
+  </div>
+
+  ${cn?`<div class="cn-box">
+    <div class="cn-title">🇨🇳 Логистика Китай → Россия</div>
+    <div style="font-size:11px;color:var(--m1);margin-bottom:9px;line-height:1.5">Сборный груз, авто/ЖД · ~$380/м³ · ${(cn.tv).toFixed(2)} м³ партия 100 шт</div>
+    <div class="cn-row"><span style="color:var(--m2)">На 1 шт (малая партия)</span><span style="font-weight:700;color:#60a5fa">${fmt(cn.per)} ₽</span></div>
+    <div class="cn-row"><span style="color:var(--m2)">На 1 шт (партия 100 шт)</span><span style="font-weight:700;color:#4ade80">${fmt(cn.perBulk)} ₽</span></div>
+    <div class="cn-row"><span style="color:var(--m2)">Итого партия 100 шт</span><span style="font-weight:700;color:#60a5fa">${fmt(cn.total)} ₽</span></div>
+    <div class="inp-hint" style="margin-top:8px">⚠️ Без таможни. С растаможкой +30–50%</div>
+  </div>`:''}
+
+  <div class="res-card" style="border-color:${profColor}40">
+    <div class="res-hdr">💡 Вывод</div>
+    <div style="font-size:13px;line-height:1.7;color:var(--m1)">
+      ${margin>25?`✅ <strong style="color:#4ade80">Хорошая маржинальность.</strong> Товар перспективен для WB.`:margin>10?`⚠️ <strong style="color:#fbbf24">Средняя маржинальность.</strong> Оптимизируй расходы или цену.`:margin>0?`⚠️ <strong style="color:#fbbf24">Низкая маржа.</strong> Повысь цену или снизь себестоимость.`:`❌ <strong style="color:#f87171">Убыточно.</strong> При текущих параметрах выходить не стоит.`}
     </div>
+  </div>`;
 
-    <!-- СКЛАДЫ -->
-    <div class="result-card">
-      <div class="result-title">🏭 Логистика WB по складам (${log.vol} л)</div>
-      ${['moscow','krasnodar','tula'].map(wh => {
-        const lg = calcWBLogistics(l, w, h, wh);
-        return `<div class="result-row"><span class="result-lbl">${getWHName(wh)}</span><span class="result-val ${wh===selectedWH?'yellow':''}">${lg.price} ₽/шт ${wh===selectedWH?'← выбран':''}</span></div>`;
-      }).join('')}
-      <div style="font-size:11px;color:var(--muted2);margin-top:8px;line-height:1.6">
-        С учётом коэф. склада. Актуальные тарифы с 15.09.2025.<br>
-        Обратная логистика (невыкуп): 50 ₽/шт на склад ВБ.
-      </div>
-    </div>
-
-    <!-- ПАРТИЯ -->
-    <div class="result-card">
-      <div class="result-title">📦 Партия 100 шт</div>
-      <div class="result-row"><span class="result-lbl">Выручка (100% выкуп)</span><span class="result-val">${fmtNum(price * 100)} ₽</span></div>
-      <div class="result-row"><span class="result-lbl">Прибыль (при ${buyout}% выкупа)</span><span class="result-val green">+${fmtNum(Math.round(profit * buyoutRate * 100))} ₽</span></div>
-      <div class="result-row"><span class="result-lbl">Затраты на партию</span><span class="result-val red">−${fmtNum(totalExpenses * 100)} ₽</span></div>
-    </div>
-
-    <!-- ЛОГИСТИКА КИТАЙ -->
-    ${chinaLog ? `
-    <div class="china-section">
-      <div class="china-title">🇨🇳 Логистика Китай → Россия</div>
-      <div style="font-size:11px;color:var(--muted2);margin-bottom:8px;line-height:1.5">
-        Средние тарифы 2025 · Сборный груз · Авто/ЖД · ~380$/м³ (~34 800₽/м³)<br>
-        Объём 1 шт: ${(chinaLog.vol_per_item * 1000000).toFixed(1)} л = ${chinaLog.vol_per_item.toFixed(4)} м³
-      </div>
-      <div class="china-row">
-        <span style="color:var(--muted2)">На 1 шт (малая партия)</span>
-        <span style="font-weight:700;color:var(--blue)">${fmtNum(chinaLog.per_item)} ₽</span>
-      </div>
-      <div class="china-row">
-        <span style="color:var(--muted2)">На 1 шт (партия ${qty} шт, ${(chinaLog.total_vol).toFixed(2)} м³)</span>
-        <span style="font-weight:700;color:var(--green)">${fmtNum(chinaLog.per_item_bulk)} ₽</span>
-      </div>
-      <div class="china-row" style="border:none">
-        <span style="color:var(--muted2)">Итого партия ${qty} шт</span>
-        <span style="font-weight:700;color:var(--blue)">${fmtNum(chinaLog.total)} ₽</span>
-      </div>
-      <div style="font-size:10px;color:var(--muted2);margin-top:8px;line-height:1.6">
-        ⚠️ Без учёта таможни и НДС. С растаможкой +30-50% к стоимости доставки.
-        Скидка при объёме &gt;1м³: −10%, &gt;3м³: −15%.
-      </div>
-    </div>` : ''}
-
-    <!-- РЕКОМЕНДАЦИЯ -->
-    <div class="result-card" style="border-color:${marginColor}40">
-      <div class="result-title">💡 Вывод</div>
-      <div style="font-size:13px;line-height:1.7;color:var(--muted2)">
-        ${margin > 25 ? `✅ <strong style="color:var(--green)">Хорошая маржинальность.</strong> Товар перспективен для выхода на WB.` :
-          margin > 10 ? `⚠️ <strong style="color:var(--yellow)">Средняя маржинальность.</strong> Нужно оптимизировать расходы или цену.` :
-          margin > 0 ? `⚠️ <strong style="color:var(--yellow)">Низкая маржинальность.</strong> Повысьте цену или снизьте себестоимость.` :
-          `❌ <strong style="color:var(--red)">Товар убыточен.</strong> При текущих параметрах продажи нецелесообразны.`}
-        <br><br>
-        Маржа ${margin}% · ROI ${roi}% · Выкуп ${buyout}%
-      </div>
-    </div>`;
-
-  el.scrollIntoView({behavior:'smooth', block:'nearest'});
-}
-
-// ══════════════════════════════════════════
-//  UTILS
-// ══════════════════════════════════════════
-function fmtNum(n) {
-  return Math.round(n).toLocaleString('ru-RU');
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 </script>
 </body>
