@@ -1,1767 +1,1023 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Marketplace Analyzer — Подбор товара</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style>
-      :root {
-        --bg: #0d1117;
-        --card: #161b22;
-        --text: #c9d1d9;
-        --muted: #8b949e;
-        --wb: #cb11ab;
-        --ozon: #005bff;
-        --green: #3fb950;
-        --yellow: #d29922;
-        --red: #f85149;
-        --border: #30363d;
-      }
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Marketplace Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0e0e16;--surface:#17172a;--surface2:#1e1e35;--surface3:#252540;
+  --border:#2a2a4a;--border2:#3a3a60;
+  --purple:#8b5cf6;--purple2:#a78bfa;--purple3:#c4b5fd;
+  --pink:#ec4899;--grad:linear-gradient(135deg,#8b5cf6,#ec4899);
+  --green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--blue:#3b82f6;
+  --text:#f1f5f9;--muted:#94a3b8;--muted2:#64748b;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px}
 
-      * {
-        box-sizing: border-box;
-      }
+/* HEADER */
+.hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50}
+.hdr-title{font-size:18px;font-weight:800;color:var(--text)}
+.hdr-demo{font-size:11px;color:var(--muted);background:var(--surface2);padding:3px 9px;border-radius:10px;border:1px solid var(--border)}
 
-      body {
-        margin: 0;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-          sans-serif;
-        background: var(--bg);
-        color: var(--text);
-      }
+/* TABS */
+.tabs-bar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none;padding:0 8px}
+.tabs-bar::-webkit-scrollbar{display:none}
+.tab-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 12px;cursor:pointer;color:var(--muted2);font-size:10px;font-weight:600;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s;flex-shrink:0;min-width:64px}
+.tab-item.active{color:var(--purple2);border-bottom-color:var(--purple)}
+.tab-icon{width:34px;height:34px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s}
+.tab-item.active .tab-icon{background:var(--grad)}
 
-      .app {
-        max-width: 960px;
-        margin: 0 auto;
-        padding: 16px;
-      }
+/* MAIN */
+.main{padding:16px;max-width:500px;margin:0 auto}
 
-      .topbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 12px;
-      }
+/* SECTION HIDDEN */
+.section{display:none}
+.section.active{display:block}
 
-      h1 {
-        font-size: 18px;
-        margin: 0;
-      }
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
+.card-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:6px}
 
-      .tabs {
-        display: flex;
-        gap: 8px;
-        margin: 12px 0 16px;
-      }
+/* INPUTS */
+.inp-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px}
+.inp{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;-webkit-appearance:none}
+.inp:focus{border-color:var(--purple)}
+.inp::placeholder{color:var(--muted2)}
+select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+select.inp option{background:var(--surface2)}
+.inp-group{margin-bottom:12px}
+.inp-hint{font-size:11px;color:var(--muted2);margin-top:4px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 
-      .tab {
-        flex: 1;
-        text-align: center;
-        padding: 10px 0;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        cursor: pointer;
-        font-size: 13px;
-        color: var(--muted);
-        background: rgba(22, 27, 34, 0.8);
-        user-select: none;
-      }
+/* TOGGLE */
+.toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--border2);border-radius:12px;cursor:pointer;transition:.3s}
+.toggle-slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+input:checked+.toggle-slider{background:var(--purple)}
+input:checked+.toggle-slider::before{transform:translateX(20px)}
+.toggle-label{font-size:13px;color:var(--text);font-weight:500}
 
-      .tab.active {
-        color: #fff;
-        border-color: transparent;
-        background: linear-gradient(90deg, var(--wb), var(--ozon));
-      }
+/* PERIOD BTNS */
+.period-row{display:flex;gap:8px;margin-top:8px}
+.period-btn{padding:8px 20px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.period-btn.active{background:var(--grad);border-color:transparent;color:#fff}
 
-      .card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        padding: 14px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-      }
+/* MODEL CHECKBOXES */
+.model-list{display:flex;flex-direction:column;gap:8px}
+.model-cb{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:all .2s}
+.model-cb.selected{border-color:var(--purple);background:rgba(139,92,246,.1)}
+.model-cb input{display:none}
+.cb-box{width:18px;height:18px;border-radius:5px;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+.model-cb.selected .cb-box{background:var(--purple);border-color:var(--purple)}
+.cb-check{color:#fff;font-size:11px;display:none}
+.model-cb.selected .cb-check{display:block}
+.cb-label{font-size:13px;font-weight:500}
+.cb-sublabel{font-size:11px;color:var(--muted);margin-left:28px;margin-top:-4px}
 
-      .muted {
-        color: var(--muted);
-        font-size: 12px;
-      }
+/* WAREHOUSE BTNS */
+.wh-row{display:flex;gap:8px;flex-wrap:wrap}
+.wh-btn{padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.wh-btn.active{background:var(--grad);border-color:transparent;color:#fff}
 
-      .row {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
+/* TAX RADIO */
+.tax-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
+.tax-opt{padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);text-align:center;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);transition:all .2s}
+.tax-opt.active{border-color:var(--purple);color:var(--purple2);background:rgba(139,92,246,.1)}
+.tax-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 
-      label {
-        font-size: 12px;
-        color: var(--muted);
-        display: block;
-        margin-bottom: 6px;
-      }
+/* MANUAL EXPENSES */
+.expense-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.expense-row:last-child{border-bottom:none}
+.expense-lbl{font-size:12px;color:var(--muted2)}
+.expense-inp{width:100px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-size:13px;font-weight:600;text-align:right;font-family:'Inter',sans-serif;outline:none}
+.expense-inp:focus{border-color:var(--purple)}
 
-      input {
-        width: 100%;
-        background: #0b0f14;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        color: var(--text);
-        padding: 10px 12px;
-        outline: none;
-        font-size: 14px;
-      }
+/* BTN GRAD */
+.btn-grad{width:100%;padding:14px;background:var(--grad);color:#fff;font-size:15px;font-weight:700;border:none;border-radius:12px;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity .2s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px}
+.btn-grad:hover{opacity:.9}
+.btn-grad:active{transform:scale(.98)}
+.btn-grad:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-outline{width:100%;padding:11px;background:transparent;color:var(--purple2);font-size:13px;font-weight:700;border:1px solid var(--purple);border-radius:12px;cursor:pointer;font-family:'Inter',sans-serif;margin-top:8px;transition:all .2s}
+.btn-outline:hover{background:rgba(139,92,246,.1)}
 
-      input:focus {
-        border-color: rgba(203, 17, 171, 0.8);
-      }
+/* RESULTS */
+.result-card{background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:14px;margin-bottom:10px}
+.result-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px}
+.result-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}
+.result-row:last-child{border-bottom:none}
+.result-lbl{color:var(--muted2)}
+.result-val{font-weight:600;font-family:'Inter',monospace}
+.result-val.red{color:var(--red)}
+.result-val.green{color:var(--green)}
+.result-val.yellow{color:var(--yellow)}
+.result-total{display:flex;justify-content:space-between;align-items:center;padding:12px 0;font-size:15px;font-weight:800;border-top:2px solid var(--border2);margin-top:6px}
+.profit-big{font-size:28px;font-weight:800;text-align:center;padding:16px 0}
+.margin-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin:8px 0}
+.margin-fill{height:100%;border-radius:4px;transition:width .6s ease}
 
-      .platform-btns {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
+/* CHINA LOGISTICS */
+.china-section{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:12px;padding:14px;margin-bottom:12px}
+.china-title{font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.china-row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid rgba(59,130,246,.1)}
+.china-row:last-child{border-bottom:none}
 
-      .pillbtn {
-        border: 1px solid #444;
-        background: #2a2a2a;
-        color: #ffffff;
-        padding: 8px 12px;
-        border-radius: 999px;
-        cursor: pointer;
-        font-size: 13px;
-      }
+/* WATCHLIST */
+.watch-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;position:relative}
+.watch-name{font-size:14px;font-weight:700;margin-bottom:4px}
+.watch-meta{font-size:12px;color:var(--muted);margin-bottom:8px}
+.watch-tags{display:flex;gap:6px;flex-wrap:wrap}
+.watch-tag{padding:3px 9px;border-radius:8px;font-size:10px;font-weight:700}
+.watch-del{position:absolute;top:12px;right:12px;background:none;border:none;color:var(--muted2);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:6px}
+.watch-del:hover{color:var(--red);background:rgba(239,68,68,.1)}
+.empty{text-align:center;padding:32px 16px;color:var(--muted)}
+.empty-icon{font-size:36px;margin-bottom:8px;opacity:.4}
+.empty-txt{font-size:13px;line-height:1.6}
 
-      /* Общая подсветка выбранных кнопок (месяц/налог и т.п.) */
-      .pillbtn.active {
-        border-color: transparent;
-        background: linear-gradient(90deg, var(--wb), var(--ozon));
-        color: #fff;
-      }
+/* ANALYSIS RESULT */
+.analysis-result{background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:16px;margin-bottom:10px}
+.ar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.ar-title{font-size:12px;color:var(--muted)}
+.ar-value{font-size:13px;font-weight:700}
+.ar-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}
+.ar-row:last-child{border-bottom:none}
+.ar-lbl{color:var(--muted2);display:flex;align-items:center;gap:5px}
+.competitor-item{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px}
+.competitor-item:last-child{border-bottom:none}
+.competitor-name{font-weight:600;margin-bottom:2px}
+.competitor-rev{font-size:11px;color:var(--yellow)}
 
-      .pillbtn.active.wb {
-        border-color: var(--wb);
-        background: rgba(203, 17, 171, 0.12);
-      }
+/* TREND BADGE */
+.trend-up{color:var(--green);font-weight:700}
+.trend-dn{color:var(--red);font-weight:700}
+.trend-st{color:var(--muted);font-weight:700}
 
-      .pillbtn.active.ozon {
-        border-color: var(--ozon);
-        background: rgba(0, 91, 255, 0.12);
-      }
+/* SPINNER */
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{text-align:center;font-size:13px;color:var(--muted);padding:24px}
 
-      .pillbtn.active.both {
-        border-color: #8b949e;
-        background: rgba(139, 148, 158, 0.12);
-      }
+/* MODAL ADD NICHE */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-end;justify-content:center;display:none}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;padding:20px 16px 32px;width:100%;max-width:500px}
+.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
+.modal-title{font-size:16px;font-weight:800;margin-bottom:16px}
 
-      .primary {
-        width: 100%;
-        margin-top: 10px;
-        border: none;
-        border-radius: 14px;
-        padding: 12px 14px;
-        cursor: pointer;
-        font-size: 15px;
-        font-weight: 600;
-        color: #fff;
-        background: linear-gradient(90deg, var(--wb), var(--ozon));
-      }
+/* SETTINGS */
+.settings-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.settings-row:last-child{border-bottom:none}
+.settings-lbl{font-size:13px;color:var(--text)}
+.settings-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.settings-val{font-size:13px;color:var(--purple2);font-weight:600}
 
-      .primary:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
+/* NOTICES */
+.notice{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:14px}
+.notice strong{color:var(--purple2)}
+</style>
+</head>
+<body>
 
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: 12px;
-        margin-top: 14px;
-      }
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-title">Marketplace Analyzer</div>
+  <div class="hdr-demo">Демо режим</div>
+</div>
 
-      .product-title {
-        font-size: 14px;
-        font-weight: 700;
-        margin: 0 0 8px;
-      }
+<!-- TABS -->
+<div class="tabs-bar">
+  <div class="tab-item active" data-tab="selection"><div class="tab-icon">🎯</div>Подбор</div>
+  <div class="tab-item" data-tab="trends"><div class="tab-icon">📈</div>Тренды</div>
+  <div class="tab-item" data-tab="analysis"><div class="tab-icon">🔍</div>Анализ</div>
+  <div class="tab-item" data-tab="watchlist"><div class="tab-icon">👁</div>Watchlist</div>
+  <div class="tab-item" data-tab="calculator"><div class="tab-icon">💰</div>Калькулятор</div>
+  <div class="tab-item" data-tab="settings"><div class="tab-icon">⚙️</div>Настройки</div>
+</div>
 
-      .kv {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 6px;
-        font-size: 13px;
-      }
+<div class="main">
 
-      .kv b {
-        font-weight: 600;
-      }
+<!-- ═══ ПОДБОР ═══ -->
+<div class="section active" id="s-selection">
+  <div class="card">
+    <div class="card-title">🎯 Подбор ниш</div>
+    <div class="inp-group">
+      <label class="inp-label">Категория или ключевое слово</label>
+      <input class="inp" id="sel-keyword" type="text" placeholder="Например: кухонные аксессуары">
+    </div>
+    <div class="inp-group">
+      <label class="inp-label">Минимальная выручка ниши, ₽</label>
+      <input class="inp" id="sel-min-rev" type="number" placeholder="1 000 000">
+    </div>
+    <div class="inp-group">
+      <label class="inp-label">Максимум продавцов</label>
+      <input class="inp" id="sel-max-sellers" type="number" placeholder="50">
+    </div>
+    <button class="btn-grad" onclick="runSelection()">🎯 Найти ниши</button>
+  </div>
+  <div id="selection-result"></div>
+</div>
 
-      .btnrow {
-        display: flex;
-        gap: 8px;
-        margin-top: 10px;
-      }
-
-      .btn {
-        flex: 1;
-        text-align: center;
-        padding: 8px 10px;
-        border-radius: 12px;
-        border: 1px solid #444;
-        background: #2a2a2a;
-        color: #ffffff;
-        text-decoration: none;
-        font-size: 13px;
-        cursor: pointer;
-      }
-
-      .hidden {
-        display: none !important;
-      }
-
-      .section-title {
-        font-size: 13px;
-        color: var(--muted);
-        margin: 0 0 10px;
-      }
-
-      /* Модальное окно для подробной информации */
-      .modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.6);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 999;
-      }
-
-      .modal {
-        max-width: 540px;
-        width: calc(100% - 32px);
-        max-height: 80vh;
-        overflow-y: auto;
-        background: var(--card);
-        border-radius: 16px;
-        border: 1px solid var(--border);
-        padding: 16px 16px 14px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-      }
-
-      .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-
-      .modal-title {
-        font-size: 15px;
-        font-weight: 600;
-        margin: 0;
-      }
-
-      .modal-close {
-        border: none;
-        background: transparent;
-        color: var(--muted);
-        font-size: 18px;
-        cursor: pointer;
-      }
-
-      .modal-section {
-        margin-top: 10px;
-        font-size: 13px;
-      }
-
-      .modal-section h3 {
-        font-size: 13px;
-        margin: 0 0 4px;
-        color: var(--muted);
-        text-transform: uppercase;
-      }
-
-      .verdict-tag {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 999px;
-        font-size: 11px;
-      }
-
-      .verdict-green {
-        background: rgba(63, 185, 80, 0.16);
-        color: var(--green);
-      }
-
-      .verdict-yellow {
-        background: rgba(210, 153, 34, 0.16);
-        color: var(--yellow);
-      }
-
-      .verdict-red {
-        background: rgba(248, 81, 73, 0.16);
-        color: var(--red);
-      }
-
-      .trend-card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        padding: 14px;
-        margin-bottom: 12px;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-      }
-
-      .trend-card .trend-header {
-        font-size: 11px;
-        color: var(--muted);
-        text-transform: uppercase;
-        margin-bottom: 4px;
-      }
-
-      .trend-card .trend-title {
-        font-size: 15px;
-        font-weight: 700;
-        margin: 0 0 8px;
-      }
-
-      .trend-card .trend-row {
-        font-size: 13px;
-        margin: 4px 0;
-      }
-
-      .trend-card .trend-cta {
-        color: var(--green);
-        font-weight: 600;
-        margin: 6px 0;
-      }
-
-      .trend-card .btn-find-product {
-        margin-top: 10px;
-        width: 100%;
-        padding: 8px 12px;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        background: rgba(63, 185, 80, 0.12);
-        color: var(--green);
-        cursor: pointer;
-        font-size: 13px;
-      }
-
-      .watchlist-card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 12px;
-        margin-bottom: 10px;
-      }
-
-      .watchlist-card .wl-name {
-        font-weight: 600;
-        font-size: 14px;
-      }
-
-      .watchlist-card .wl-meta {
-        font-size: 12px;
-        color: var(--muted);
-        margin-top: 4px;
-      }
-
-      .watchlist-card .wl-status {
-        font-size: 11px;
-        margin-top: 4px;
-      }
-
-      .wl-status.ok { color: var(--green); }
-      .wl-status.warn { color: var(--yellow); }
-      .wl-status.err { color: var(--red); }
-    </style>
-  </head>
-  <body>
-    <div class="app">
-      <div class="topbar">
-        <h1>Marketplace Analyzer</h1>
-        <div class="muted" id="env-badge"></div>
+<!-- ═══ ТРЕНДЫ ═══ -->
+<div class="section" id="s-trends">
+  <div class="card">
+    <div class="card-title">📈 Анализ трендов</div>
+    <div class="notice"><strong>Тренды</strong> — растущие ниши за выбранный период по данным ВБ. В демо-режиме показываем примерные данные.</div>
+    <div class="inp-group">
+      <label class="inp-label">Период</label>
+      <div class="period-row">
+        <button class="period-btn active" data-period="1">1 мес</button>
+        <button class="period-btn" data-period="3">3 мес</button>
+        <button class="period-btn" data-period="6">6 мес</button>
       </div>
+    </div>
+    <button class="btn-grad" onclick="runTrends()">📈 Загрузить тренды</button>
+  </div>
+  <div id="trends-result"></div>
+</div>
 
-      <div class="tabs">
-        <div class="tab active" data-tab="pick">🎯 Подбор</div>
-        <div class="tab" data-tab="trends">📈 Тренды</div>
-        <div class="tab" data-tab="analyze">🔍 Анализ</div>
-        <div class="tab" data-tab="watchlist">👁 Watchlist</div>
-        <div class="tab" data-tab="calc">💰 Калькулятор</div>
-        <div class="tab" data-tab="settings">⚙️ Настройки</div>
+<!-- ═══ АНАЛИЗ ═══ -->
+<div class="section" id="s-analysis">
+  <div class="card">
+    <div class="card-title">🔍 Анализ ниши</div>
+    <div class="inp-group">
+      <label class="inp-label">Ключевое слово или категория</label>
+      <input class="inp" id="analysis-keyword" type="text" placeholder="Например: массажные пистолеты">
+    </div>
+    <div class="inp-group">
+      <label class="inp-label">Период</label>
+      <div class="period-row" id="analysis-periods">
+        <button class="period-btn active" data-period="1">1 мес</button>
+        <button class="period-btn" data-period="3">3 мес</button>
+        <button class="period-btn" data-period="6">6 мес</button>
       </div>
+    </div>
+    <button class="btn-grad" onclick="runAnalysis()">🔍 Анализировать</button>
+  </div>
+  <div id="analysis-result"></div>
+</div>
 
-      <!-- ВКЛАДКА: ПОДБОР -->
-      <div id="tab-pick">
-        <div class="card">
-          <div class="section-title">Найти прибыльный товар</div>
+<!-- ═══ WATCHLIST ═══ -->
+<div class="section" id="s-watchlist">
+  <div class="card">
+    <div class="card-title">👁 Отслеживаемые ниши</div>
+    <div class="notice"><strong>Бот раз в день</strong> проверяет изменения и пришлёт уведомление при изменении выручки ±10%+, новом крупном игроке или изменении % выкупа.</div>
+    <!-- КНОПКА ДОБАВИТЬ — прямо здесь в Watchlist, не переходит на Анализ -->
+    <button class="btn-grad" onclick="openAddNiche()">➕ Добавить нишу</button>
+  </div>
+  <div id="watchlist-items"></div>
+</div>
 
-          <div style="margin-bottom: 10px">
-            <label>Ниша или категория (необязательно)</label>
-            <input id="pick-query" type="text" placeholder="Например: массажные пистолеты" />
-          </div>
+<!-- ═══ КАЛЬКУЛЯТОР ═══ -->
+<div class="section" id="s-calculator">
+  <div class="card">
+    <div class="card-title">💰 Калькулятор прибыли WB</div>
 
-          <div style="margin-bottom: 10px">
-            <label>Ваш бюджет, ₽</label>
-            <input id="pick-budget" type="number" placeholder="Например: 100000" />
-          </div>
+    <!-- ПАРАМЕТРЫ ТОВАРА -->
+    <div style="font-size:13px;font-weight:700;color:var(--purple2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">Параметры товара</div>
 
-          <div style="margin-bottom: 10px">
-            <label>Платформа</label>
-            <div class="platform-btns">
-              <button class="pillbtn wb active" data-platform="wb">WB</button>
-              <button class="pillbtn ozon" data-platform="ozon">Ozon</button>
-              <button class="pillbtn both" data-platform="both">Обе</button>
-            </div>
-          </div>
+    <div class="inp-group">
+      <label class="inp-label">Категория товара *</label>
+      <select class="inp" id="calc-category" onchange="onCategoryChange()">
+        <option value="">— Выберите категорию —</option>
+        <option value="clothes">Одежда / Обувь (34.5%)</option>
+        <option value="cosmetics">Косметика / Парфюмерия (23%)</option>
+        <option value="home">Товары для дома (15%)</option>
+        <option value="electronics">Электроника (10%)</option>
+        <option value="food">Продукты питания (10%)</option>
+        <option value="chemistry">Бытовая химия (29.5%)</option>
+        <option value="auto">Автоаксессуары (26.5%)</option>
+        <option value="sport">Спорт / Туризм (18%)</option>
+        <option value="kids">Детские товары (14%)</option>
+        <option value="pets">Зоотовары (12%)</option>
+        <option value="tools">Инструменты / Строительство (8%)</option>
+        <option value="books">Книги / Канцелярия (8%)</option>
+        <option value="jewelry">Украшения / Бижутерия (20%)</option>
+        <option value="garden">Сад / Огород / Растения (10%)</option>
+        <option value="other">Другое (17%)</option>
+      </select>
+      <div class="inp-hint" id="category-hint">Выберите категорию — покажем комиссию WB</div>
+    </div>
 
-          <div style="margin-bottom: 10px">
-            <label>Сезонность</label>
-            <div class="platform-btns" id="month-btns">
-              <button class="pillbtn" data-month="январь">Янв</button>
-              <button class="pillbtn" data-month="февраль">Фев</button>
-              <button class="pillbtn" data-month="март">Мар</button>
-              <button class="pillbtn" data-month="апрель">Апр</button>
-              <button class="pillbtn" data-month="май">Май</button>
-              <button class="pillbtn" data-month="июнь">Июн</button>
-              <button class="pillbtn" data-month="июль">Июл</button>
-              <button class="pillbtn" data-month="август">Авг</button>
-              <button class="pillbtn" data-month="сентябрь">Сен</button>
-              <button class="pillbtn" data-month="октябрь">Окт</button>
-              <button class="pillbtn" data-month="ноябрь">Ноя</button>
-              <button class="pillbtn" data-month="декабрь">Дек</button>
-              <button class="pillbtn both active" data-month="">Пропустить</button>
-            </div>
-            <div class="muted" style="margin-top: 6px">
-              Месяц используется как фильтр сезонности (в демо — для отображения).
-            </div>
-          </div>
+    <div class="inp-group">
+      <label class="inp-label">Цена продажи, ₽ *</label>
+      <input class="inp" type="number" id="calc-price" placeholder="0" oninput="liveRecalc()">
+      <div class="inp-hint" id="avg-price-hint"></div>
+    </div>
 
-          <div style="margin-bottom: 10px">
-            <label>Налог</label>
-            <div class="platform-btns" id="tax-btns">
-              <button class="pillbtn active" data-tax="0.06">УСН 6%</button>
-              <button class="pillbtn" data-tax="0.15">УСН 15%</button>
-              <button class="pillbtn" data-tax="custom">Своя ставка</button>
-            </div>
-            <div id="custom-tax-wrap" class="hidden" style="margin-top: 8px">
-              <label>Своя ставка, %</label>
-              <input
-                id="custom-tax-input"
-                type="number"
-                inputmode="decimal"
-                placeholder="Например: 1 или 20"
-              />
-              <div class="muted" style="margin-top: 6px">
-                Будет применяться как налог от цены продажи.
-              </div>
-            </div>
-          </div>
-
-          <button class="primary" id="btn-find">🎯 Найти товар</button>
-          <div class="muted" id="pick-status" style="margin-top: 8px"></div>
-        </div>
-
-        <div id="results" class="grid"></div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">Габариты товара (с упаковкой)</div>
+    <div class="g3" style="margin-bottom:8px">
+      <div class="inp-group" style="margin-bottom:0">
+        <label class="inp-label">Длина, см</label>
+        <input class="inp" type="number" id="calc-l" placeholder="0" oninput="calcVolume()">
       </div>
-
-      <!-- ВКЛАДКА: ТРЕНДЫ -->
-      <div id="tab-trends" class="hidden">
-        <div id="trends-form" class="card">
-          <div class="section-title">Найти трендовые ниши</div>
-          <div style="margin-bottom: 10px">
-            <label>Платформа</label>
-            <div class="platform-btns" id="trends-platform-btns">
-              <button class="pillbtn wb active" data-platform="wb">WB</button>
-              <button class="pillbtn ozon" data-platform="ozon">Ozon</button>
-              <button class="pillbtn both" data-platform="both">Обе</button>
-            </div>
-          </div>
-          <div style="margin-bottom: 10px">
-            <label>Период</label>
-            <div class="platform-btns" id="trends-period-btns">
-              <button class="pillbtn active" data-period="1">1 мес</button>
-              <button class="pillbtn" data-period="3">3 мес</button>
-              <button class="pillbtn" data-period="6">6 мес</button>
-            </div>
-          </div>
-          <div style="margin-bottom: 10px">
-            <label>Категория</label>
-            <input id="trends-category" type="text" placeholder="Например: электроника, спорт... (необязательно)" />
-          </div>
-          <button class="primary" id="btn-find-trends">📈 Найти тренды</button>
-        </div>
-        <div id="trends-list" class="hidden" style="margin-top: 14px;"></div>
+      <div class="inp-group" style="margin-bottom:0">
+        <label class="inp-label">Ширина, см</label>
+        <input class="inp" type="number" id="calc-w" placeholder="0" oninput="calcVolume()">
       </div>
-
-      <!-- ВКЛАДКА: АНАЛИЗ НИШИ -->
-      <div id="tab-analyze" class="hidden">
-        <div class="card">
-          <div class="section-title">🔍 Анализ ниши</div>
-          <div style="margin-bottom: 10px">
-            <label>Ключевое слово или категория</label>
-            <input id="analyze-query" type="text" placeholder="Например: массажные пистолеты" />
-          </div>
-          <div style="margin-bottom: 10px">
-            <label>Период</label>
-            <div class="platform-btns" id="analyze-period-btns">
-              <button class="pillbtn active" data-period="1">1 мес</button>
-              <button class="pillbtn" data-period="3">3 мес</button>
-              <button class="pillbtn" data-period="6">6 мес</button>
-            </div>
-          </div>
-          <button class="primary" id="btn-analyze">🔍 Анализировать</button>
-          <div class="muted" id="analyze-status" style="margin-top: 8px"></div>
-        </div>
-        <div id="analyze-result" class="card hidden" style="margin-top: 14px;"></div>
+      <div class="inp-group" style="margin-bottom:0">
+        <label class="inp-label">Высота, см</label>
+        <input class="inp" type="number" id="calc-h" placeholder="0" oninput="calcVolume()">
       </div>
+    </div>
+    <div class="inp-hint" id="volume-hint" style="margin-bottom:12px">Объём: — л · Логистика рассчитывается по объёму</div>
 
-      <!-- ВКЛАДКА: WATCHLIST -->
-      <div id="tab-watchlist" class="hidden">
-        <div class="card">
-          <div class="section-title">👁 Отслеживаемые ниши</div>
-          <p class="muted" style="margin: 0 0 10px">
-            Бот раз в день проверяет изменения и пришлёт уведомление при изменении выручки ±10%+, новом крупном игроке или изменении % выкупа.
-          </p>
-          <button class="primary" id="btn-watchlist-add">➕ Добавить нишу</button>
-        </div>
-        <div id="watchlist-list" style="margin-top: 14px;"></div>
-      </div>
+    <button class="btn-outline" style="margin-top:0;margin-bottom:12px" onclick="fillAvgDims()">📐 Заполнить средние габариты</button>
 
-      <!-- ВКЛАДКА: КАЛЬКУЛЯТОР -->
-      <div id="tab-calc" class="hidden">
-        <div class="card">
-          <div class="section-title">Ручной расчёт (упрощённый)</div>
-          <div class="row">
-            <div style="flex: 1 1 220px">
-              <label>Название товара</label>
-              <input id="c-name" placeholder="Термос 500 мл" />
-            </div>
-            <div style="flex: 1 1 160px">
-              <label>Цена закупки, ₽</label>
-              <input id="c-buy" type="number" placeholder="200" />
-            </div>
-            <div style="flex: 1 1 160px">
-              <label>Цена продажи, ₽</label>
-              <input id="c-sell" type="number" placeholder="990" />
-            </div>
-            <div style="flex: 1 1 160px">
-              <label>Бюджет, ₽</label>
-              <input id="c-budget" type="number" placeholder="100000" />
-            </div>
-          </div>
+    <div class="toggle-row" style="margin-bottom:16px">
+      <label class="toggle"><input type="checkbox" id="calc-heavy" onchange="liveRecalc()"><span class="toggle-slider"></span></label>
+      <span class="toggle-label">Товар тяжелее 25 кг</span>
+    </div>
 
-          <div class="row" style="margin-top: 10px">
-            <div style="flex: 1 1 220px">
-              <label>Платформа</label>
-              <select id="c-platform">
-                <option value="wb">WB</option>
-                <option value="ozon">Ozon</option>
-              </select>
-            </div>
-            <div style="flex: 1 1 220px">
-              <label>Налог</label>
-              <select id="c-tax">
-                <option value="0.06">УСН 6%</option>
-                <option value="0.15">УСН 15%</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="margin-top: 10px">
-            <label>Склад хранения</label>
-            <div class="platform-btns" id="c-warehouse-btns">
-              <button class="pillbtn active" data-warehouse="moscow">Москва/СПб</button>
-              <button class="pillbtn" data-warehouse="krasnodar">Краснодар</button>
-              <button class="pillbtn" data-warehouse="kazan">Казань</button>
-              <button class="pillbtn" data-warehouse="novosibirsk">Новосибирск</button>
-            </div>
-          </div>
-
-          <button class="primary" id="btn-calc" style="margin-top: 12px">
-            Посчитать
-          </button>
-          <pre
-            id="calc-out"
-            style="
-              margin: 12px 0 0;
-              white-space: pre-wrap;
-              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-                monospace;
-              font-size: 12px;
-              color: var(--text);
-            "
-          ></pre>
-          <div class="muted">
-            Логистика WB зависит от склада (Москва 90 ₽, Краснодар 110 ₽, Казань 130 ₽, Новосибирск 180 ₽).
-            Комиссия 15%, хранение 15 ₽, СПП 5%, реклама 15%, фулфилмент 50 ₽, логистика Китай 56 ₽, прочие 15000 ₽/мес.
-          </div>
+    <!-- МОДЕЛЬ ПРОДАЖ -->
+    <div style="font-size:13px;font-weight:700;color:var(--purple2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">Модель продаж</div>
+    <div class="model-list" id="model-list">
+      <div class="model-cb selected" data-model="fbs" onclick="toggleModel(this)">
+        <div class="cb-box"><span class="cb-check">✓</span></div>
+        <div>
+          <div class="cb-label">Маркетплейс (FBS)</div>
         </div>
       </div>
-
-      <!-- ВКЛАДКА: НАСТРОЙКИ -->
-      <div id="tab-settings" class="hidden">
-        <div class="card">
-          <div class="section-title">⚙️ Настройки</div>
-
-          <div class="section-title" style="margin-top: 12px; margin-bottom: 6px;">🔑 Токены API</div>
-
-          <div style="margin-bottom: 10px">
-            <label>MPStats токен</label>
-            <input id="s-token" type="password" placeholder="Вставьте MPStats токен" />
-            <button type="button" class="btn" id="btn-save-mpstats" style="margin-top: 6px">Сохранить</button>
-            <div class="muted" id="s-token-status" style="margin-top: 6px"></div>
-          </div>
-
-          <div style="margin-bottom: 10px">
-            <label>Яндекс.Директ токен (необязательно)</label>
-            <input id="s-yandex-token" type="password" placeholder="Вставьте токен Яндекс.Директ" />
-            <button type="button" class="btn" id="btn-save-yandex" style="margin-top: 6px">Сохранить</button>
-            <div class="muted" id="s-yandex-status" style="margin-top: 6px"></div>
-          </div>
-
-          <div class="muted" style="margin: 10px 0">
-            Google Trends: ✅ Подключён (всегда, бесплатно)
-          </div>
-
-          <div class="section-title" style="margin-top: 14px; margin-bottom: 6px;">📊 Источники данных</div>
-          <div id="s-sources-status" class="muted" style="margin-bottom: 12px">Загрузка...</div>
-
-          <hr style="border: none; border-top: 1px solid var(--border); margin: 14px 0;" />
-
-          <div class="row">
-            <div style="flex: 1 1 180px">
-              <label>Минимальная маржа, %</label>
-              <input id="s-min-margin" type="number" placeholder="20" />
-            </div>
-            <div style="flex: 1 1 180px">
-              <label>Минимальный ROI, %</label>
-              <input id="s-min-roi" type="number" placeholder="50" />
-            </div>
-          </div>
-
-          <button class="primary" id="btn-save-settings" style="margin-top: 12px">
-            Сохранить пороги (маржа / ROI)
-          </button>
-          <div class="muted" id="s-status" style="margin-top: 8px"></div>
+      <div class="model-cb selected" data-model="fbw" onclick="toggleModel(this)">
+        <div class="cb-box"><span class="cb-check">✓</span></div>
+        <div>
+          <div class="cb-label">Склад WB (FBW)</div>
+        </div>
+      </div>
+      <div class="model-cb" data-model="dbs" onclick="toggleModel(this)">
+        <div class="cb-box"><span class="cb-check">✓</span></div>
+        <div>
+          <div class="cb-label">Доставка силами продавца (DBS)</div>
         </div>
       </div>
     </div>
 
-    <script>
-      const tg = window.Telegram ? window.Telegram.WebApp : null;
-      const USER_ID =
-        tg && tg.initDataUnsafe && tg.initDataUnsafe.user
-          ? tg.initDataUnsafe.user.id
-          : 0;
+    <!-- СКЛАД -->
+    <div style="font-size:13px;font-weight:700;color:var(--purple2);margin:16px 0 10px;text-transform:uppercase;letter-spacing:.5px">Склад хранения</div>
+    <div class="wh-row" id="wh-row">
+      <button class="wh-btn active" data-wh="moscow" onclick="selectWH(this)">Москва</button>
+      <button class="wh-btn" data-wh="krasnodar" onclick="selectWH(this)">Краснодар</button>
+      <button class="wh-btn" data-wh="tula" onclick="selectWH(this)">Тула</button>
+    </div>
+    <div class="inp-hint" id="logistics-hint" style="margin-top:8px">Логистика WB зависит от объёма и склада</div>
 
-      if (tg) tg.expand();
+    <!-- СТАТИСТИКА -->
+    <div style="font-size:13px;font-weight:700;color:var(--purple2);margin:16px 0 10px;text-transform:uppercase;letter-spacing:.5px">Статистика</div>
+    <div class="g2">
+      <div class="inp-group">
+        <label class="inp-label">Оборачиваемость, дни</label>
+        <input class="inp" type="number" id="calc-turnover" placeholder="30" oninput="liveRecalc()">
+        <div class="inp-hint" id="turnover-hint">Ср. по категории: —</div>
+      </div>
+      <div class="inp-group">
+        <label class="inp-label">Доля выкупа, %</label>
+        <input class="inp" type="number" id="calc-buyout" placeholder="70" oninput="liveRecalc()">
+        <div class="inp-hint" id="buyout-hint">Ср. по категории: —</div>
+      </div>
+    </div>
 
-      // UI: tabs
-      const tabs = document.querySelectorAll(".tab");
-      const tabPick = document.getElementById("tab-pick");
-      const tabTrends = document.getElementById("tab-trends");
-      const tabAnalyze = document.getElementById("tab-analyze");
-      const tabWatchlist = document.getElementById("tab-watchlist");
-      const tabCalc = document.getElementById("tab-calc");
-      const tabSettings = document.getElementById("tab-settings");
+    <!-- РАСХОДЫ -->
+    <div style="font-size:13px;font-weight:700;color:var(--purple2);margin:16px 0 10px;text-transform:uppercase;letter-spacing:.5px">Расходы</div>
 
-      function showTab(name) {
-        tabs.forEach((t) => t.classList.remove("active"));
-        const sel = document.querySelector(`.tab[data-tab="${name}"]`);
-        if (sel) sel.classList.add("active");
-        tabPick.classList.toggle("hidden", name !== "pick");
-        tabTrends.classList.toggle("hidden", name !== "trends");
-        tabAnalyze.classList.toggle("hidden", name !== "analyze");
-        tabWatchlist.classList.toggle("hidden", name !== "watchlist");
-        tabCalc.classList.toggle("hidden", name !== "calc");
-        tabSettings.classList.toggle("hidden", name !== "settings");
-        if (name === "trends") {
-          const formEl = document.getElementById("trends-form");
-          const listEl = document.getElementById("trends-list");
-          if (formEl) formEl.classList.remove("hidden");
-          if (listEl) listEl.classList.add("hidden");
-        }
-        if (name === "watchlist") renderWatchlist();
-        if (name === "settings") refreshSettingsSources();
-      }
+    <div class="inp-group">
+      <label class="inp-label">Себестоимость товара, ₽</label>
+      <input class="inp" type="number" id="calc-cost" placeholder="0" oninput="liveRecalc()">
+    </div>
 
-      tabs.forEach((t) =>
-        t.addEventListener("click", () => showTab(t.dataset.tab))
-      );
+    <div class="inp-group">
+      <label class="inp-label">Доля расходов на продвижение, %</label>
+      <input class="inp" type="number" id="calc-promo" placeholder="15" oninput="liveRecalc()">
+    </div>
 
-      // Badge
-      document.getElementById("env-badge").textContent = USER_ID
-        ? "Telegram WebApp"
-        : "Демо режим (браузер)";
+    <!-- ВИД НАЛОГООБЛОЖЕНИЯ -->
+    <div style="font-size:13px;font-weight:700;color:var(--purple2);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.5px">Вид налогообложения</div>
+    <select class="inp" id="calc-tax-type" style="margin-bottom:10px" onchange="onTaxTypeChange()">
+      <option value="usn">УСН</option>
+      <option value="osn">ОСН</option>
+    </select>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Налоговая ставка, %</div>
+    <div class="tax-grid" id="tax-rates">
+      <div class="tax-opt active" data-rate="6" onclick="selectTax(this)">6%</div>
+      <div class="tax-opt" data-rate="15" onclick="selectTax(this)">15%</div>
+      <div class="tax-opt" data-rate="25" onclick="selectTax(this)">25%</div>
+    </div>
+    <div class="tax-grid2" style="margin-top:8px">
+      <div class="tax-opt" data-rate="custom" onclick="selectTax(this)">Другая</div>
+      <div class="tax-opt" data-rate="0" onclick="selectTax(this)">Не учитывать</div>
+    </div>
+    <input class="inp" type="number" id="calc-tax-custom" placeholder="Своя ставка %" style="margin-top:8px;display:none" oninput="liveRecalc()">
 
-      // Settings storage
-      const LS_KEY = "mpa_settings_v1";
-      function loadSettings() {
-        try {
-          return JSON.parse(localStorage.getItem(LS_KEY) || "{}");
-        } catch {
-          return {};
-        }
-      }
-      function saveSettings(s) {
-        localStorage.setItem(LS_KEY, JSON.stringify(s));
-      }
-      const settings = loadSettings();
+    <!-- РУЧНЫЕ РАСХОДЫ -->
+    <div style="font-size:13px;font-weight:700;color:var(--purple2);margin:16px 0 10px;text-transform:uppercase;letter-spacing:.5px">Ручной ввод расходов</div>
+    <div class="notice">Введите актуальные значения для вашего товара</div>
+    <div class="card" style="padding:12px;margin-bottom:0">
+      <div class="expense-row">
+        <div><div class="expense-lbl">Реклама, ₽/шт</div></div>
+        <input class="expense-inp" type="number" id="exp-ads" value="120" oninput="liveRecalc()">
+      </div>
+      <div class="expense-row">
+        <div><div class="expense-lbl">Налог УСН 6%, ₽/шт</div></div>
+        <input class="expense-inp" type="number" id="exp-tax" value="48" oninput="liveRecalc()">
+      </div>
+      <div class="expense-row">
+        <div><div class="expense-lbl">Фулфилмент, ₽/шт</div></div>
+        <input class="expense-inp" type="number" id="exp-fulfill" value="50" oninput="liveRecalc()">
+      </div>
+      <div class="expense-row">
+        <div><div class="expense-lbl">Прочие расходы, ₽/шт</div></div>
+        <input class="expense-inp" type="number" id="exp-other" value="46" oninput="liveRecalc()">
+      </div>
+    </div>
 
-      const sToken = document.getElementById("s-token");
-      const sYandexToken = document.getElementById("s-yandex-token");
-      const sMinMargin = document.getElementById("s-min-margin");
-      const sMinRoi = document.getElementById("s-min-roi");
-      const sStatus = document.getElementById("s-status");
-      const sTokenStatus = document.getElementById("s-token-status");
-      const sYandexStatus = document.getElementById("s-yandex-status");
-      const sSourcesStatus = document.getElementById("s-sources-status");
+    <button class="btn-grad" onclick="calcProfit()">💰 Рассчитать прибыль</button>
+  </div>
 
-      sMinMargin.value = settings.minMargin ?? 20;
-      sMinRoi.value = settings.minRoi ?? 50;
+  <!-- RESULTS -->
+  <div id="calc-result"></div>
+</div>
 
-      async function refreshSettingsSources() {
-        if (!sSourcesStatus) return;
-        if (!USER_ID) {
-          sSourcesStatus.textContent = "Google Trends ✅ | MPStats — | Яндекс — (войдите через Telegram WebApp для токенов)";
-          return;
-        }
-        try {
-          const resp = await fetch(`/api/settings?user_id=${USER_ID}`);
-          const data = resp.ok ? await resp.json() : {};
-          const mp = data.mpstats_set ? "✅" : "❌";
-          const ya = data.yandex_set ? "✅" : "❌";
-          sSourcesStatus.textContent = `Google Trends ✅ | MPStats ${mp} | Яндекс ${ya}`;
-        } catch {
-          sSourcesStatus.textContent = "Google Trends ✅ | MPStats ? | Яндекс ?";
-        }
-      }
+<!-- ═══ НАСТРОЙКИ ═══ -->
+<div class="section" id="s-settings">
+  <div class="card">
+    <div class="card-title">⚙️ Настройки</div>
+    <div class="settings-row">
+      <div><div class="settings-lbl">API Wildberries</div><div class="settings-sub">Для реальных данных</div></div>
+      <div class="settings-val">Не подключён</div>
+    </div>
+    <div class="settings-row">
+      <div><div class="settings-lbl">Claude AI ключ</div><div class="settings-sub">Для аналитики</div></div>
+      <div class="settings-val">—</div>
+    </div>
+    <div class="settings-row">
+      <div><div class="settings-lbl">Telegram уведомления</div><div class="settings-sub">При изменении ниш</div></div>
+      <label class="toggle" style="flex-shrink:0"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+    </div>
+    <div class="settings-row">
+      <div><div class="settings-lbl">Режим работы</div><div class="settings-sub">Текущий режим</div></div>
+      <div class="settings-val">Демо</div>
+    </div>
+  </div>
+</div>
 
-      document.getElementById("btn-save-mpstats").addEventListener("click", async () => {
-        const token = sToken.value.trim();
-        if (!token) {
-          sTokenStatus.textContent = "Введите токен.";
-          return;
-        }
-        if (!USER_ID) {
-          sTokenStatus.textContent = "Сохранить можно только из Telegram WebApp.";
-          return;
-        }
-        sTokenStatus.textContent = "Сохраняю...";
-        try {
-          const resp = await fetch("/api/settings/token", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: USER_ID, token }),
-          });
-          if (!resp.ok) throw new Error("save failed");
-          sTokenStatus.textContent = "✅ MPStats токен сохранён.";
-          refreshSettingsSources();
-        } catch {
-          sTokenStatus.textContent = "Не удалось сохранить.";
-        }
-      });
+</div><!-- /main -->
 
-      document.getElementById("btn-save-yandex").addEventListener("click", async () => {
-        const token = sYandexToken.value.trim();
-        if (!token) {
-          sYandexStatus.textContent = "Введите токен.";
-          return;
-        }
-        if (!USER_ID) {
-          sYandexStatus.textContent = "Сохранить можно только из Telegram WebApp.";
-          return;
-        }
-        sYandexStatus.textContent = "Сохраняю...";
-        try {
-          const resp = await fetch("/api/settings/yandex", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: USER_ID, token }),
-          });
-          if (!resp.ok) throw new Error("save failed");
-          sYandexStatus.textContent = "✅ Токен Яндекс.Директ сохранён.";
-          refreshSettingsSources();
-        } catch {
-          sYandexStatus.textContent = "Не удалось сохранить.";
-        }
-      });
+<!-- MODAL: Добавить нишу -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Добавить нишу в Watchlist</div>
+    <div class="inp-group">
+      <label class="inp-label">Название ниши / ключевое слово</label>
+      <input class="inp" id="modal-niche-name" type="text" placeholder="Например: силиконовые лопатки">
+    </div>
+    <div class="inp-group">
+      <label class="inp-label">Текущая выручка ниши, ₽ (опционально)</label>
+      <input class="inp" id="modal-niche-rev" type="number" placeholder="0">
+    </div>
+    <div class="inp-group">
+      <label class="inp-label">% выкупа (опционально)</label>
+      <input class="inp" id="modal-niche-buyout" type="number" placeholder="70">
+    </div>
+    <button class="btn-grad" onclick="addNicheToWatchlist()">✅ Добавить</button>
+    <button class="btn-outline" onclick="closeModal()">Отмена</button>
+  </div>
+</div>
 
-      document.getElementById("btn-save-settings").addEventListener("click", async () => {
-        const minMargin = parseFloat(sMinMargin.value || "20");
-        const minRoi = parseFloat(sMinRoi.value || "50");
-        saveSettings({ minMargin, minRoi });
-        sStatus.textContent = "✅ Пороги сохранены.";
-      });
+<script>
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+let watchlist = [];
+try { watchlist = JSON.parse(localStorage.getItem('mpa_watchlist') || '[]'); } catch(e){}
 
-      // Autopодбор
-      let currentPlatform = "wb";
-      let currentMonth = "";
-      let currentTaxRate = 0.06;
+let selectedPeriod = 1;
+let selectedTrendPeriod = 1;
+let selectedWH = 'moscow';
+let selectedTaxRate = 6;
 
-      const platformBtns = document.querySelectorAll(".pillbtn[data-platform]");
-      platformBtns.forEach((b) => {
-        b.addEventListener("click", () => {
-          platformBtns.forEach((x) => x.classList.remove("active"));
-          b.classList.add("active");
-          currentPlatform = b.dataset.platform;
-        });
-      });
+// Данные по категориям
+const CATEGORIES = {
+  clothes:    {name:'Одежда / Обувь',          commission:34.5, avgPrice:2200, turnover:25, buyout:55},
+  cosmetics:  {name:'Косметика / Парфюмерия',  commission:23,   avgPrice:800,  turnover:20, buyout:75},
+  home:       {name:'Товары для дома',          commission:15,   avgPrice:900,  turnover:22, buyout:72},
+  electronics:{name:'Электроника',             commission:10,   avgPrice:3500, turnover:18, buyout:85},
+  food:       {name:'Продукты питания',         commission:10,   avgPrice:400,  turnover:12, buyout:90},
+  chemistry:  {name:'Бытовая химия',            commission:29.5, avgPrice:350,  turnover:15, buyout:80},
+  auto:       {name:'Автоаксессуары',           commission:26.5, avgPrice:1200, turnover:30, buyout:70},
+  sport:      {name:'Спорт / Туризм',           commission:18,   avgPrice:1500, turnover:28, buyout:68},
+  kids:       {name:'Детские товары',           commission:14,   avgPrice:700,  turnover:20, buyout:78},
+  pets:       {name:'Зоотовары',               commission:12,   avgPrice:500,  turnover:16, buyout:82},
+  tools:      {name:'Инструменты',             commission:8,    avgPrice:1800, turnover:35, buyout:75},
+  books:      {name:'Книги / Канцелярия',       commission:8,    avgPrice:350,  turnover:20, buyout:88},
+  jewelry:    {name:'Украшения / Бижутерия',   commission:20,   avgPrice:1100, turnover:28, buyout:62},
+  garden:     {name:'Сад / Огород',            commission:10,   avgPrice:600,  turnover:30, buyout:73},
+  other:      {name:'Другое',                  commission:17,   avgPrice:1000, turnover:25, buyout:70},
+};
 
-      const monthBtns = document.querySelectorAll(
-        "#month-btns .pillbtn[data-month]"
-      );
-      monthBtns.forEach((b) => {
-        b.addEventListener("click", () => {
-          monthBtns.forEach((x) => x.classList.remove("active"));
-          b.classList.add("active");
-          currentMonth = b.dataset.month || "";
-        });
-      });
+// Логистика WB 2025 (актуальные тарифы с 15.09.2025)
+// До 1л: градация по объёму
+// Более 1л: 46₽ первый литр + 14₽ каждый доп.
+// Коэффициент склада: Москва ≈1.0, Краснодар ≈1.15, Тула ≈1.1
+const WH_COEFF = {moscow:1.0, krasnodar:1.15, tula:1.1};
 
-      const taxBtns = document.querySelectorAll("#tax-btns .pillbtn[data-tax]");
-      const customTaxWrap = document.getElementById("custom-tax-wrap");
-      const customTaxInput = document.getElementById("custom-tax-input");
-      taxBtns.forEach((b) => {
-        b.addEventListener("click", () => {
-          taxBtns.forEach((x) => x.classList.remove("active"));
-          b.classList.add("active");
-          const v = b.dataset.tax || "0.06";
-          if (v === "custom") {
-            customTaxWrap.classList.remove("hidden");
-            // Если пользователь ещё не ввёл — оставляем текущую ставку, но показываем поле
-            customTaxInput.focus();
-          } else {
-            customTaxWrap.classList.add("hidden");
-            currentTaxRate = parseFloat(v);
-          }
-        });
-      });
+function calcWBLogistics(l, w, h, warehouse) {
+  const vol = (l * w * h) / 1000; // литры
+  if (!vol || vol <= 0) return {vol:0, price:0};
+  let base;
+  if (vol <= 0.2)       base = vol * 23;
+  else if (vol <= 0.4)  base = vol * 26;
+  else if (vol <= 0.6)  base = vol * 29;
+  else if (vol <= 0.8)  base = vol * 30;
+  else if (vol <= 1.0)  base = vol * 32;
+  else                  base = 46 + (vol - 1) * 14;
+  return {vol: Math.round(vol * 100) / 100, price: Math.round(base * WH_COEFF[warehouse] * 10) / 10};
+}
 
-      // Пользовательская ставка налога
-      customTaxInput.addEventListener("input", () => {
-        const raw = parseFloat(customTaxInput.value || "");
-        if (!isNaN(raw) && raw >= 0 && raw <= 100) {
-          currentTaxRate = raw / 100;
-        }
-      });
+// Логистика Китай → Россия (средние данные за 2025)
+// Авто: ~440$/куб (сборные) или 2.5$/кг
+// Жд: ~300-350$/куб
+// Среднее: ~380$/куб ≈ 34 800₽/куб при курсе ~90₽/$
+// На 1 шт: объём_шт_в_куб * 34800
+const CHINA_RATE_PER_CBM = 34800; // ₽ за 1 м³
+const CHINA_RATE_PER_KG  = 230;   // ₽/кг (альтернатива)
 
-      const pickBudget = document.getElementById("pick-budget");
-      const pickStatus = document.getElementById("pick-status");
-      const btnFind = document.getElementById("btn-find");
-      const results = document.getElementById("results");
-      let currentProducts = [];
+function calcChinaLogistics(l, w, h, qty) {
+  const vol_per_item_m3 = (l * w * h) / 1000000; // м³
+  if (!vol_per_item_m3 || vol_per_item_m3 <= 0) return null;
+  const per_item = Math.round(vol_per_item_m3 * CHINA_RATE_PER_CBM);
+  const total_vol = vol_per_item_m3 * qty;
+  // Скидка за объём: >1 куб = -10%, >3 куб = -15%
+  let rate = CHINA_RATE_PER_CBM;
+  if (total_vol > 3) rate *= 0.85;
+  else if (total_vol > 1) rate *= 0.9;
+  const per_item_bulk = Math.round(vol_per_item_m3 * rate);
+  const total = Math.round(total_vol * rate);
+  return {per_item, per_item_bulk, total, vol_per_item: vol_per_item_m3, total_vol};
+}
 
-      const WB_LOGISTICS = {
-        moscow: 90,
-        krasnodar: 110,
-        kazan: 130,
-        novosibirsk: 180,
-        other: 150,
-      };
+// ══════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════
+document.querySelectorAll('.tab-item').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-item').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('s-' + t.dataset.tab).classList.add('active');
+    if (t.dataset.tab === 'watchlist') renderWatchlist();
+  });
+});
 
-      let currentCalcWarehouse = "moscow";
-      document.querySelectorAll("#c-warehouse-btns .pillbtn").forEach((b) => {
-        b.addEventListener("click", () => {
-          document.querySelectorAll("#c-warehouse-btns .pillbtn").forEach((x) => x.classList.remove("active"));
-          b.classList.add("active");
-          currentCalcWarehouse = b.dataset.warehouse || "moscow";
-        });
-      });
+// Period buttons
+document.querySelectorAll('.period-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    b.closest('.period-row').querySelectorAll('.period-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    selectedPeriod = +b.dataset.period;
+  });
+});
 
-      function fmtMoney(n) {
-        if (n == null || isNaN(n)) return "—";
-        return Math.round(n).toLocaleString("ru-RU");
-      }
+// ══════════════════════════════════════════
+//  SELECTION
+// ══════════════════════════════════════════
+function runSelection() {
+  const kw = document.getElementById('sel-keyword').value.trim();
+  const el = document.getElementById('selection-result');
+  if (!kw) { el.innerHTML = '<div class="notice">Введите ключевое слово</div>'; return; }
+  el.innerHTML = `<div class="loading-txt"><div class="spinner"></div>Ищем ниши для «${kw}»...</div>`;
+  setTimeout(() => {
+    const niches = generateDemoNiches(kw);
+    el.innerHTML = niches.map(n => `
+      <div class="analysis-result">
+        <div class="ar-header"><span style="font-size:15px;font-weight:800">${n.name}</span><span class="trend-${n.trend==='Рост'?'up':n.trend==='Падение'?'dn':'st'}">▲ ${n.trend}</span></div>
+        <div class="ar-row"><span class="ar-lbl">💰 Выручка ниши</span><span class="ar-value">${fmtNum(n.revenue)} ₽</span></div>
+        <div class="ar-row"><span class="ar-lbl">👥 Продавцов</span><span class="ar-value">${n.sellers}</span></div>
+        <div class="ar-row"><span class="ar-lbl">🔄 % выкупа</span><span class="ar-value">${n.buyout}%</span></div>
+        <div class="ar-row" style="border:none"><span class="ar-lbl">📦 Ср. цена</span><span class="ar-value">${fmtNum(n.avgPrice)} ₽</span></div>
+        <button class="btn-outline" style="margin-top:8px" onclick="addToWatchlistDirect('${n.name}', ${n.revenue}, ${n.buyout})">+ В Watchlist</button>
+      </div>`).join('');
+  }, 1200);
+}
 
-      function fmtDate(str) {
-        if (!str) return "—";
-        try {
-          const d = new Date(str.replace("Z", "+00:00"));
-          if (isNaN(d.getTime())) return str;
-          const day = String(d.getDate()).padStart(2, "0");
-          const month = String(d.getMonth() + 1).padStart(2, "0");
-          const year = d.getFullYear();
-          const h = String(d.getHours()).padStart(2, "0");
-          const m = String(d.getMinutes()).padStart(2, "0");
-          return `${day}.${month}.${year} ${h}:${m}`;
-        } catch (_) {
-          return str;
-        }
-      }
+function generateDemoNiches(kw) {
+  const base = Math.round(Math.random() * 50000000 + 5000000);
+  return [
+    {name: kw, revenue: base, sellers: Math.round(Math.random()*80+10), buyout: Math.round(Math.random()*30+55), avgPrice: Math.round(Math.random()*2000+300), trend:'Рост'},
+    {name: kw + ' оптом', revenue: Math.round(base*0.6), sellers: Math.round(Math.random()*30+5), buyout: Math.round(Math.random()*20+60), avgPrice: Math.round(Math.random()*1500+200), trend:'Стабильно'},
+    {name: 'Премиум ' + kw, revenue: Math.round(base*0.3), sellers: Math.round(Math.random()*15+3), buyout: Math.round(Math.random()*15+65), avgPrice: Math.round(Math.random()*3000+800), trend:'Рост'},
+  ];
+}
 
-      // Расчёт юнит-экономики для карточки (та же логика, что в модалке)
-      function computeUnitEconomics(p) {
-        const salePrice = Number(p.sale_price || 0);
-        const budget = Number(p._budget || 0);
-        const taxRate = Number(p._taxRate || 0.06);
-        const purchaseRub = Number(
-          p.purchase_rub || Math.round(salePrice * 0.2)
-        );
-
-        const COMMISSION_RATE = 0.15;
-        const LOGISTICS_WB = 90; // рекомендуемый склад Москва
-        const STORAGE_WB = 15;
-        const SPP_RATE = 0.05;
-        const ADS_RATE = 0.15;
-        const LOGISTICS_CN = 56;
-        const FULFILLMENT = 50;
-        const OTHER_TOTAL = 15000;
-
-        const costPerUnit = purchaseRub + LOGISTICS_CN + FULFILLMENT;
-        const units = costPerUnit > 0 ? Math.floor(budget / costPerUnit) : 0;
-        const otherPerUnit = units > 0 ? OTHER_TOTAL / units : OTHER_TOTAL;
-
-        const commission = salePrice * COMMISSION_RATE;
-        const spp = salePrice * SPP_RATE;
-        const ads = salePrice * ADS_RATE;
-        const tax = salePrice * taxRate;
-        const expensesTotal =
-          commission +
-          LOGISTICS_WB +
-          STORAGE_WB +
-          spp +
-          ads +
-          tax +
-          otherPerUnit;
-
-        const netProfitPerUnit = salePrice - costPerUnit - expensesTotal;
-        const marginPercent =
-          salePrice > 0 ? (netProfitPerUnit / salePrice) * 100 : 0;
-        const roiPercent =
-          costPerUnit > 0 ? (netProfitPerUnit / costPerUnit) * 100 : 0;
-
-        const profitPerMonth = netProfitPerUnit * units;
-        const batchCost = costPerUnit * units;
-        const paybackMonths =
-          profitPerMonth > 0 ? batchCost / profitPerMonth : 0;
-
-        // Вердикт по жёстким правилам
-        // Вердикт по жёстким правилам:
-        // БРАТЬ: buyout >=70%, маржа >=25%, ROI >=80%, окупаемость <1, чистая прибыль >50
-        let verdictType = "red";
-        let verdictText = "🔴 НЕ БРАТЬ";
-
-        const niche = DEMO_DETAILS[p.title]?.niche || {};
-        const nicheBuyout = (niche.buyout_rate ?? p.buyout_rate ?? 0) * 100;
-
-        const buyoutOk = nicheBuyout >= 70;
-        const econOk =
-          netProfitPerUnit > 50 &&
-          marginPercent >= 25 &&
-          roiPercent >= 80 &&
-          paybackMonths < 1;
-
-        if (buyoutOk && econOk) {
-          verdictType = "green";
-          verdictText = "🟢 БРАТЬ";
-        }
-
-        return {
-          salePrice,
-          budget,
-          taxRate,
-          purchaseRub,
-          costPerUnit,
-          units,
-          otherPerUnit,
-          commission,
-          spp,
-          ads,
-          tax,
-          expensesTotal,
-          netProfitPerUnit,
-          marginPercent,
-          roiPercent,
-          profitPerMonth,
-          paybackMonths,
-          verdictType,
-          verdictText,
-        };
-      }
-
-      function cardHtml(p, idx) {
-        const extra = DEMO_DETAILS[p.title] || {};
-        const niche = extra.niche || {};
-        const buyout = (niche.buyout_rate ?? p.buyout_rate ?? 0) * 100;
-        return `
-          <div class="card">
-            <div class="product-title">${p.title}</div>
-            <div class="kv">
-              <div>📦 <b>Категория:</b> ${p.category}</div>
-              <div>💰 <b>Цена продажи:</b> ${fmtMoney(p.sale_price)} ₽</div>
-              <div>📈 <b>Выручка ниши:</b> ${fmtMoney(
-                Math.round((p.niche_revenue || 0) / 100) * 100
-              )} ₽</div>
-              <div>🏭 <b>Локализация:</b> склад Москва, 78%, логистика 90 ₽/шт</div>
-              <div>✅ <b>Монополист:</b> ${p.monopolist ? "ДА" : "НЕТ"}</div>
-              <div>💵 <b>Прибыль/мес:</b> ${fmtMoney(p.profit_per_month)} ₽</div>
-              <div>🔄 <b>Выкуп:</b> ${Math.round(buyout)}%</div>
-              <div>📊 <b>Маржа:</b> ${p.margin_percent.toFixed(
-                1
-              )}% | <b>ROI:</b> ${p.roi_percent.toFixed(1)}%</div>
-            </div>
-            <div class="btnrow">
-              <button class="btn btn-more" data-idx="${idx}">Подробнее</button>
-              <a class="btn" href="${p.china_url || "#"}" target="_blank">1688 🇨🇳</a>
-            </div>
+// ══════════════════════════════════════════
+//  TRENDS
+// ══════════════════════════════════════════
+function runTrends() {
+  const el = document.getElementById('trends-result');
+  el.innerHTML = `<div class="loading-txt"><div class="spinner"></div>Загружаем тренды...</div>`;
+  setTimeout(() => {
+    const trending = [
+      {name:'Силиконовые коврики', growth:'+34%', revenue:18500000, sellers:22, trend:'up'},
+      {name:'Умные весы', growth:'+28%', revenue:24000000, sellers:31, trend:'up'},
+      {name:'Органайзеры для дома', growth:'+22%', revenue:15600000, sellers:45, trend:'up'},
+      {name:'Кухонные аксессуары', growth:'+19%', revenue:31200000, sellers:68, trend:'up'},
+      {name:'Средства для уборки', growth:'+17%', revenue:22800000, sellers:39, trend:'up'},
+      {name:'Детские игрушки STEM', growth:'+15%', revenue:12400000, sellers:27, trend:'up'},
+    ];
+    el.innerHTML = `<div style="font-size:11px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Топ растущих ниш · за ${selectedPeriod} мес</div>` +
+      trending.map((t,i) => `
+        <div class="analysis-result" style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-size:14px;font-weight:700">${i+1}. ${t.name}</div>
+            <span class="trend-up" style="font-size:16px;font-weight:800">${t.growth}</span>
           </div>
-        `;
-      }
-
-      function applyClientFilters(products) {
-        const s = loadSettings();
-        const minMargin = parseFloat(s.minMargin ?? 20);
-        const minRoi = parseFloat(s.minRoi ?? 50);
-        return products.filter((p) => {
-          const calc = computeUnitEconomics(p);
-          p._calc = calc;
-          // Сохраняем пересчитанные значения
-          p.margin_percent = calc.marginPercent;
-          p.roi_percent = calc.roiPercent;
-          p.profit_per_month = calc.profitPerMonth;
-          const niche = DEMO_DETAILS[p.title]?.niche || {};
-          const nicheBuyout = (niche.buyout_rate ?? p.buyout_rate ?? 0) * 100;
-          const comps = DEMO_DETAILS[p.title]?.competitors || [];
-
-          // Жёсткие фильтры
-          if (nicheBuyout < 70) return false;
-
-          // Каждый конкурент, если есть buyout_rate — не ниже 70%
-          if (
-            comps.length &&
-            comps.some((c) => (c.buyout_rate ?? niche.buyout_rate ?? 0) * 100 < 70)
-          ) {
-            return false;
-          }
-
-          if (
-            !(
-              calc.netProfitPerUnit > 50 &&
-              calc.marginPercent >= 25 &&
-              calc.roiPercent >= 80 &&
-              calc.paybackMonths < 1
-            )
-          ) {
-            return false;
-          }
-
-          // Дополнительно уважаем пользовательские пороги
-          if (calc.marginPercent < minMargin || calc.roiPercent < minRoi) {
-            return false;
-          }
-          return true;
-        });
-      }
-
-      async function findProducts() {
-        const budget = parseFloat(pickBudget.value || "0");
-        if (!budget || budget <= 0) {
-          pickStatus.textContent = "Введите бюджет (например 100000).";
-          return;
-        }
-
-        const nicheQuery = (document.getElementById("pick-query") && document.getElementById("pick-query").value) || "";
-        btnFind.disabled = true;
-        pickStatus.textContent = nicheQuery
-          ? `Ищем товары в нише: ${nicheQuery}...`
-          : "Ищу товары...";
-        results.innerHTML = "";
-
-        try {
-          const resp = await fetch(
-            `/api/find-products?budget=${encodeURIComponent(
-              budget
-            )}&platform=${encodeURIComponent(currentPlatform)}`
-          );
-          if (!resp.ok) throw new Error("api error");
-          const data = await resp.json();
-          const enriched = data.map((p) => ({
-            ...p,
-            _budget: budget,
-            _month: currentMonth,
-            _taxRate: currentTaxRate,
-          }));
-          const filtered = applyClientFilters(enriched);
-          if (!filtered.length) {
-            if (currentTaxRate >= 0.149 && currentTaxRate <= 0.151) {
-              pickStatus.textContent =
-                "😔 При УСН 15% не найдено прибыльных товаров с данным бюджетом.";
-            } else {
-              pickStatus.textContent =
-                "😔 По вашим фильтрам не найдено подходящих товаров. Попробуйте снизить пороги или изменить налог.";
-            }
-            return;
-          }
-          currentProducts = filtered.slice(0, 5);
-          results.innerHTML = currentProducts
-            .map((p, idx) => cardHtml(p, idx))
-            .join("");
-          attachCardHandlers();
-          pickStatus.textContent = `Найдено товаров: ${Math.min(filtered.length, 5)}.`;
-        } catch (e) {
-          // Демо режим: если API недоступно. 5 товаров подобраны под фильтры:
-          // выкуп ниши/конкурентов >= 70%, маржа >= 25%, ROI >= 80%, окупаемость < 1 мес, прибыль/шт > 50 ₽ (УСН 6%, бюджет 100k–500k)
-          const demoRaw = [
-            {
-              title: "🎯 Термос 500 мл нержавеющая сталь",
-              category: "Термосы и термокружки",
-              sale_price: 1520,
-              purchase_rub: 200,
-              niche_revenue: 42000000,
-              monopolist: false,
-              profit_per_month: 0,
-              margin_percent: 0,
-              roi_percent: 0,
-              details_url: "#",
-              china_url: "https://www.alibaba.com/trade/search?SearchText=%E4%BF%9D%E6%B8%A9%E6%9D%AF",
-            },
-            {
-              title: "🎯 Набор органайзеров для кабелей 6 шт",
-              category: "Органайзеры",
-              sale_price: 1600,
-              purchase_rub: 220,
-              niche_revenue: 15000000,
-              monopolist: false,
-              profit_per_month: 0,
-              margin_percent: 0,
-              roi_percent: 0,
-              details_url: "#",
-              china_url: "https://www.alibaba.com/trade/search?SearchText=%E7%94%B5%E7%BA%BF%E6%94%B6%E7%BA%B3%E5%99%A8",
-            },
-            {
-              title: "🎯 Силиконовая форма для кексов 6 ячеек",
-              category: "Товары для кухни",
-              sale_price: 1480,
-              purchase_rub: 180,
-              niche_revenue: 28000000,
-              monopolist: false,
-              profit_per_month: 0,
-              margin_percent: 0,
-              roi_percent: 0,
-              details_url: "#",
-              china_url: "https://www.alibaba.com/trade/search?SearchText=%E7%A1%85%E8%83%B6%E8%9B%8B%E7%B3%95%E6%A8%A1%E5%85%B7",
-            },
-            {
-              title: "🎯 Массажный роллер EVA 45 см",
-              category: "Товары для спорта",
-              sale_price: 1800,
-              purchase_rub: 250,
-              niche_revenue: 22000000,
-              monopolist: false,
-              profit_per_month: 0,
-              margin_percent: 0,
-              roi_percent: 0,
-              details_url: "#",
-              china_url: "https://www.alibaba.com/trade/search?SearchText=foam%20roller",
-            },
-            {
-              title: "🎯 Чехол для AirPods Pro с карабином",
-              category: "Аксессуары для электроники",
-              sale_price: 1420,
-              purchase_rub: 170,
-              niche_revenue: 18000000,
-              monopolist: false,
-              profit_per_month: 0,
-              margin_percent: 0,
-              roi_percent: 0,
-              details_url: "#",
-              china_url: "https://www.alibaba.com/trade/search?SearchText=AirPods%20case",
-            },
-          ];
-          const demo = applyClientFilters(
-            demoRaw.map((p) => ({
-              ...p,
-              _budget: budget,
-              _month: currentMonth,
-              _taxRate: currentTaxRate,
-            }))
-          );
-          if (!demo.length) {
-            if (currentTaxRate >= 0.149 && currentTaxRate <= 0.151) {
-              pickStatus.textContent =
-                "😔 При УСН 15% не найдено прибыльных товаров с данным бюджетом.";
-            } else {
-              pickStatus.textContent =
-                "😔 По вашим фильтрам не найдено демо-товаров. Попробуйте снизить пороги или изменить налог.";
-            }
-          } else {
-            currentProducts = demo.slice(0, 5);
-            results.innerHTML = currentProducts
-              .map((p, idx) => cardHtml(p, idx))
-              .join("");
-            attachCardHandlers();
-            pickStatus.textContent = "Показаны демо-результаты (API недоступно).";
-          }
-        } finally {
-          btnFind.disabled = false;
-        }
-      }
-
-      btnFind.addEventListener("click", findProducts);
-
-      // ===== ТРЕНДЫ =====
-      const DEMO_TRENDS = [
-        { id: 1, title: "Массажные пистолеты", growth: 280, months: 6, cta: "ВХОДИТЬ СЕЙЧАС", revenue: 24500000, sellers: 28, sellersLabel: "мало", potential: "ВЫСОКИЙ", category: "спорт" },
-        { id: 2, title: "Термосы 500 мл", growth: 145, months: 6, cta: "ВХОДИТЬ СЕЙЧАС", revenue: 42000000, sellers: 120, sellersLabel: "средне", potential: "ВЫСОКИЙ", category: "товары для дома" },
-        { id: 3, title: "Органайзеры для кабелей", growth: 98, months: 6, cta: "СЛЕДИТЬ", revenue: 15000000, sellers: 80, sellersLabel: "средне", potential: "СРЕДНИЙ", category: "электроника" },
-        { id: 4, title: "Силиконовые формы для кексов", growth: 62, months: 6, cta: "СЛЕДИТЬ", revenue: 28000000, sellers: 95, sellersLabel: "средне", potential: "СРЕДНИЙ", category: "кухня" },
-        { id: 5, title: "Чехлы для AirPods Pro", growth: 38, months: 6, cta: "ОСТОРОЖНО", revenue: 18000000, sellers: 150, sellersLabel: "много", potential: "НИЗКИЙ", category: "электроника" },
-      ];
-
-      let currentTrendPlatform = "wb";
-      let currentTrendPeriod = 1;
-      document.querySelectorAll("#trends-platform-btns .pillbtn").forEach((b) => {
-        b.addEventListener("click", () => {
-          document.querySelectorAll("#trends-platform-btns .pillbtn").forEach((x) => x.classList.remove("active"));
-          b.classList.add("active");
-          currentTrendPlatform = b.dataset.platform || "wb";
-        });
-      });
-      document.querySelectorAll("#trends-period-btns .pillbtn").forEach((b) => {
-        b.addEventListener("click", () => {
-          document.querySelectorAll("#trends-period-btns .pillbtn").forEach((x) => x.classList.remove("active"));
-          b.classList.add("active");
-          currentTrendPeriod = parseInt(b.dataset.period || "1", 10);
-        });
-      });
-
-      document.getElementById("btn-find-trends").addEventListener("click", () => {
-        const formEl = document.getElementById("trends-form");
-        const listEl = document.getElementById("trends-list");
-        if (formEl) formEl.classList.add("hidden");
-        if (listEl) listEl.classList.remove("hidden");
-        renderTrends();
-      });
-
-      function renderTrends() {
-        const container = document.getElementById("trends-list");
-        const categoryInput = document.getElementById("trends-category");
-        const categoryQuery = (categoryInput && categoryInput.value.trim()) || "";
-        const trendsToShow = categoryQuery
-          ? DEMO_TRENDS.filter((t) => (t.category || "").toLowerCase().includes(categoryQuery.toLowerCase()) || (t.title || "").toLowerCase().includes(categoryQuery.toLowerCase()))
-          : DEMO_TRENDS.slice(0, 5);
-        if (!container) return;
-        if (!trendsToShow.length) {
-          container.innerHTML = `<div class="muted">По категории «${categoryQuery.replace(/</g, "&lt;")}» трендов не найдено. Попробуйте другое слово или оставьте поле пустым для топ-5 по всем нишам.</div>`;
-          return;
-        }
-        container.innerHTML = trendsToShow.map((t, i) => `
-          <div class="trend-card">
-            <div class="trend-header">🔥 ТРЕНД #${i + 1}</div>
-            <div class="trend-title">${t.title}</div>
-            <div class="trend-row">📈 Рост: +${t.growth}% за ${t.months} мес</div>
-            <div class="trend-cta">🚀 ${t.cta}</div>
-            <div class="trend-row">💰 Выручка: ${fmtMoney(t.revenue)}₽</div>
-            <div class="trend-row">👥 Продавцов: ${t.sellers} (${t.sellersLabel})</div>
-            <div class="trend-row">⭐ Потенциал: ${t.potential}</div>
-            <button type="button" class="btn-find-product" data-trend-query="${t.title.replace(/"/g, "&quot;")}">🎯 Найти товар</button>
+          <div style="display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--muted)">
+            <span>💰 ${fmtNum(t.revenue)} ₽</span><span>👥 ${t.sellers} продавцов</span>
           </div>
-        `).join("");
-        const pickQueryInput = document.getElementById("pick-query");
-        container.querySelectorAll(".btn-find-product").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            const trendTitle = (btn.dataset.trendQuery || "").replace(/&quot;/g, '"');
-            showTab("pick");
-            if (pickQueryInput) pickQueryInput.value = trendTitle;
-            if (pickStatus) pickStatus.textContent = trendTitle ? `Ищем товары в нише: ${trendTitle}...` : "";
-            if (!pickBudget.value || parseFloat(pickBudget.value) <= 0) pickBudget.value = "100000";
-            findProducts();
-          });
-        });
-      }
+          <button class="btn-outline" style="margin-top:8px;font-size:12px;padding:7px" onclick="addToWatchlistDirect('${t.name}', ${t.revenue}, 72)">+ В Watchlist</button>
+        </div>`).join('');
+  }, 1000);
+}
 
-      // ===== АНАЛИЗ НИШИ =====
-      let analyzePeriod = 1;
-      document.querySelectorAll("#analyze-period-btns .pillbtn").forEach((b) => {
-        b.addEventListener("click", () => {
-          document.querySelectorAll("#analyze-period-btns .pillbtn").forEach((x) => x.classList.remove("active"));
-          b.classList.add("active");
-          analyzePeriod = parseInt(b.dataset.period || "1", 10);
-        });
-      });
+// ══════════════════════════════════════════
+//  ANALYSIS
+// ══════════════════════════════════════════
+function runAnalysis() {
+  const kw = document.getElementById('analysis-keyword').value.trim();
+  const el = document.getElementById('analysis-result');
+  if (!kw) { el.innerHTML = '<div class="notice">Введите ключевое слово</div>'; return; }
+  el.innerHTML = `<div class="loading-txt"><div class="spinner"></div>Анализируем «${kw}»...<br><span style="font-size:11px;opacity:.6">Демо-результат (API недоступен)</span></div>`;
+  setTimeout(() => {
+    const rev = Math.round(Math.random()*40000000 + 8000000);
+    const sellers = Math.round(Math.random()*60+10);
+    const buyout = Math.round(Math.random()*25+58);
+    const competitors = [
+      {name: kw + ' Premium Pro 5 режимов', rev: Math.round(rev*0.18)},
+      {name: kw + ' Standard Plus', rev: Math.round(rev*0.13)},
+      {name: kw + ' Light Edition', rev: Math.round(rev*0.11)},
+      {name: kw + ' Basic Set', rev: Math.round(rev*0.09)},
+      {name: kw + ' Mini Compact', rev: Math.round(rev*0.07)},
+    ];
+    el.innerHTML = `
+      <div class="analysis-result">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Результат: «${kw}» · ${selectedPeriod} мес</div>
+        <div class="ar-row"><span class="ar-lbl">💰 Выручка ниши</span><span class="ar-value">${fmtNum(rev)} ₽</span></div>
+        <div class="ar-row"><span class="ar-lbl">👥 Продавцов</span><span class="ar-value">${sellers}</span></div>
+        <div class="ar-row"><span class="ar-lbl">🔄 % выкупа</span><span class="ar-value">${buyout}%</span></div>
+        <div class="ar-row"><span class="ar-lbl">📈 Тренд</span><span class="trend-up">▲ Рост</span></div>
+        <div style="font-size:12px;font-weight:700;color:var(--purple2);margin:12px 0 8px">Топ-5 конкурентов</div>
+        ${competitors.map((c,i) => `<div class="competitor-item"><div class="competitor-name">${i+1}. ${c.name}</div><div class="competitor-rev">${fmtNum(c.rev)} ₽</div></div>`).join('')}
+        <button class="btn-outline" style="margin-top:10px" onclick="addToWatchlistDirect('${kw}', ${rev}, ${buyout})">+ Добавить в Watchlist</button>
+      </div>`;
+  }, 1400);
+}
 
-      const analyzeQuery = document.getElementById("analyze-query");
-      const analyzeStatus = document.getElementById("analyze-status");
-      const analyzeResult = document.getElementById("analyze-result");
+// ══════════════════════════════════════════
+//  WATCHLIST
+// ══════════════════════════════════════════
+function openAddNiche() {
+  document.getElementById('modal-niche-name').value = '';
+  document.getElementById('modal-niche-rev').value = '';
+  document.getElementById('modal-niche-buyout').value = '';
+  document.getElementById('modal-add').classList.add('open');
+  setTimeout(() => document.getElementById('modal-niche-name').focus(), 100);
+}
+function closeModal() {
+  document.getElementById('modal-add').classList.remove('open');
+}
+document.getElementById('modal-add').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
 
-      document.getElementById("btn-analyze").addEventListener("click", async () => {
-        const query = analyzeQuery.value.trim();
-        if (!query) {
-          analyzeStatus.textContent = "Введите ключевое слово или категорию.";
-          return;
-        }
-        analyzeStatus.textContent = "Анализирую...";
-        analyzeResult.classList.add("hidden");
-        try {
-          const resp = await fetch(`/api/analyze-niche?query=${encodeURIComponent(query)}&period=${analyzePeriod}`);
-          let data = null;
-          if (resp.ok) data = await resp.json();
-          if (!data) {
-            data = {
-              revenue: 24500000,
-              sellers: 28,
-              buyout_percent: 72,
-              trend: "growth",
-              competitors: [
-                { name: "Массажный пистолет Xiaomi Youpin Pro 5 режимов", revenue: 4200000 },
-                { name: "Массажный пистолет Bradex K 052", revenue: 3100000 },
-                { name: "Массажный пистолет Welbu 9 режимов", revenue: 2800000 },
-                { name: "Массажный пистолет Zepter Massage Gun", revenue: 2100000 },
-                { name: "Массажный пистолет Medcursor MC-01", revenue: 1900000 },
-              ],
-            };
-            analyzeStatus.textContent = "Демо-результат (API недоступен).";
-          } else {
-            analyzeStatus.textContent = "";
-          }
-          const trendText = data.trend === "growth" ? "▲ Рост" : data.trend === "fall" ? "▼ Падение" : "→ Стабильно";
-          const compsHtml = (data.competitors || []).slice(0, 5).map((c, i) =>
-            `<div style="margin:6px 0">${i + 1}. ${c.name || "—"}${c.revenue ? ` · ${fmtMoney(c.revenue)} ₽` : ""}</div>`
-          ).join("");
-          analyzeResult.innerHTML = `
-            <div class="section-title">Результат: «${query.replace(/</g, "&lt;")}»</div>
-            <div class="kv">
-              <div>💰 Выручка ниши: ${fmtMoney(data.revenue)} ₽</div>
-              <div>👥 Продавцов: ${data.sellers ?? "—"}</div>
-              <div>🔄 % выкупа: ${data.buyout_percent ?? "—"}%</div>
-              <div>📈 Тренд: ${trendText}</div>
-            </div>
-            <h3 class="section-title" style="margin-top:12px">Топ-5 конкурентов</h3>
-            <div>${compsHtml || "<div class=\"muted\">Нет данных.</div>"}</div>
-          `;
-          analyzeResult.classList.remove("hidden");
-        } catch (e) {
-          analyzeStatus.textContent = "Ошибка запроса. Показан демо-результат.";
-          analyzeResult.classList.remove("hidden");
-        }
-      });
+function addNicheToWatchlist() {
+  const name = document.getElementById('modal-niche-name').value.trim();
+  if (!name) { alert('Введите название ниши'); return; }
+  const rev = +document.getElementById('modal-niche-rev').value || 0;
+  const buyout = +document.getElementById('modal-niche-buyout').value || 0;
+  addToWatchlistDirect(name, rev, buyout);
+  closeModal();
+}
 
-      // ===== WATCHLIST =====
-      let watchlistItems = [];
+function addToWatchlistDirect(name, rev, buyout) {
+  if (watchlist.find(w => w.name === name)) {
+    alert('Эта ниша уже в Watchlist'); return;
+  }
+  watchlist.push({id: Date.now(), name, revenue: rev, buyout, added: new Date().toLocaleDateString('ru')});
+  try { localStorage.setItem('mpa_watchlist', JSON.stringify(watchlist)); } catch(e){}
+  renderWatchlist();
+  // Switch to watchlist tab
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.toggle('active', t.dataset.tab==='watchlist'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('s-watchlist').classList.add('active');
+}
 
-      function renderWatchlist() {
-        const container = document.getElementById("watchlist-list");
-        if (!container) return;
-        if (!watchlistItems.length) {
-          container.innerHTML = "<div class=\"muted\">Нет отслеживаемых ниш. Нажмите «➕ Добавить нишу» или добавьте нишу из результата анализа в боте.</div>";
-          return;
-        }
-        container.innerHTML = watchlistItems.map((w) => `
-          <div class="watchlist-card">
-            <div class="wl-name">«${(w.query || "").replace(/</g, "&lt;")}» · ${(w.platform || "WB").toUpperCase()}</div>
-            <div class="wl-meta">Последнее изменение: ${w.last_checked || fmtDate(w.last_checked_at) || "—"}</div>
-            <div class="wl-status ${w.status_class || "ok"}">Статус: ${w.status_text || "Отслеживается"}</div>
-          </div>
-        `).join("");
-      }
+function removeFromWatchlist(id) {
+  watchlist = watchlist.filter(w => w.id !== id);
+  try { localStorage.setItem('mpa_watchlist', JSON.stringify(watchlist)); } catch(e){}
+  renderWatchlist();
+}
 
-      document.getElementById("btn-watchlist-add").addEventListener("click", () => {
-        showTab("analyze");
-        analyzeQuery.focus();
-      });
+function renderWatchlist() {
+  const el = document.getElementById('watchlist-items');
+  if (!watchlist.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-txt">Нет отслеживаемых ниш.<br>Добавьте нишу кнопкой выше<br>или из результатов анализа.</div></div>`;
+    return;
+  }
+  el.innerHTML = watchlist.map(w => `
+    <div class="watch-card">
+      <button class="watch-del" onclick="removeFromWatchlist(${w.id})">🗑</button>
+      <div class="watch-name">👁 ${w.name}</div>
+      <div class="watch-meta">Добавлено ${w.added}</div>
+      <div class="watch-tags">
+        ${w.revenue ? `<span class="watch-tag" style="background:rgba(245,158,11,.12);color:var(--yellow)">💰 ${fmtNum(w.revenue)} ₽</span>` : ''}
+        ${w.buyout ? `<span class="watch-tag" style="background:rgba(34,197,94,.12);color:var(--green)">🔄 ${w.buyout}% выкупа</span>` : ''}
+      </div>
+    </div>`).join('');
+}
+renderWatchlist();
 
-      // Загрузка watchlist с сервера (если есть API)
-      async function loadWatchlist() {
-        if (!USER_ID) return;
-        try {
-          const resp = await fetch(`/api/watchlist?user_id=${USER_ID}`);
-          if (resp.ok) {
-            const data = await resp.json();
-            watchlistItems = data.items || data || [];
-            if (Array.isArray(watchlistItems)) {
-              watchlistItems.forEach((w) => {
-                const raw = w.last_checked || w.last_checked_at;
-                w.last_checked = raw ? fmtDate(raw) : "—";
-                w.status_text = w.status_text || "Отслеживается";
-                w.status_class = "ok";
-              });
-            }
-          }
-        } catch (_) {}
-        if (document.getElementById("tab-watchlist") && !document.getElementById("tab-watchlist").classList.contains("hidden")) {
-          renderWatchlist();
-        }
-      }
-      loadWatchlist();
+// ══════════════════════════════════════════
+//  CALCULATOR
+// ══════════════════════════════════════════
+function onCategoryChange() {
+  const cat = document.getElementById('calc-category').value;
+  const hint = document.getElementById('category-hint');
+  const avgHint = document.getElementById('avg-price-hint');
+  const tHint = document.getElementById('turnover-hint');
+  const bHint = document.getElementById('buyout-hint');
+  if (cat && CATEGORIES[cat]) {
+    const c = CATEGORIES[cat];
+    hint.textContent = `Комиссия WB: ${c.commission}% (${cat==='clothes'?'FBW, зафиксировано до 30.04.2026':'актуальная ставка'})`;
+    hint.style.color = 'var(--purple2)';
+    avgHint.textContent = `Средняя цена в категории: ${fmtNum(c.avgPrice)} ₽`;
+    tHint.textContent = `Ср. по категории: ${c.turnover} дней`;
+    bHint.textContent = `Ср. по категории: ${c.buyout}%`;
+    // Автозаполнение оборачиваемости и выкупа если пусто
+    if (!document.getElementById('calc-turnover').value)
+      document.getElementById('calc-turnover').value = c.turnover;
+    if (!document.getElementById('calc-buyout').value)
+      document.getElementById('calc-buyout').value = c.buyout;
+  } else {
+    hint.textContent = 'Выберите категорию — покажем комиссию WB';
+    hint.style.color = '';
+    avgHint.textContent = '';
+  }
+  liveRecalc();
+}
 
-      // Calculator (client-side, same constants/formula as Telegram simplified)
-      document.getElementById("btn-calc").addEventListener("click", () => {
-        const name = document.getElementById("c-name").value.trim() || "Товар";
-        const buy = parseFloat(document.getElementById("c-buy").value || "0");
-        const sell = parseFloat(document.getElementById("c-sell").value || "0");
-        const budget = parseFloat(document.getElementById("c-budget").value || "0");
-        const taxRate = parseFloat(document.getElementById("c-tax").value || "0.06");
+function calcVolume() {
+  const l = +document.getElementById('calc-l').value;
+  const w = +document.getElementById('calc-w').value;
+  const h = +document.getElementById('calc-h').value;
+  const hint = document.getElementById('volume-hint');
+  const lHint = document.getElementById('logistics-hint');
+  if (l && w && h) {
+    const log = calcWBLogistics(l, w, h, selectedWH);
+    hint.textContent = `Объём: ${log.vol} л · ${getLogisticsFormula(l, w, h)}`;
+    hint.style.color = 'var(--purple2)';
+    lHint.textContent = `Логистика WB (${getWHName(selectedWH)}): ~${log.price} ₽/шт`;
+    lHint.style.color = 'var(--yellow)';
+  } else {
+    hint.textContent = 'Объём: — л · Логистика рассчитывается по объёму';
+    hint.style.color = '';
+  }
+  liveRecalc();
+}
 
-        const commission = sell * 0.15;
-        const logisticsWb = WB_LOGISTICS[currentCalcWarehouse] ?? WB_LOGISTICS.moscow;
-        const storage = 15;
-        const spp = sell * 0.05;
-        const ads = sell * 0.15;
-        const tax = sell * taxRate;
-        const fullCost = buy + 56 + 50;
-        const units = fullCost > 0 ? Math.floor(budget / fullCost) : 0;
-        const otherPerUnit = units > 0 ? 15000 / units : 0;
-        const expenses =
-          commission + logisticsWb + storage + spp + ads + tax + otherPerUnit;
-        const net = sell - fullCost - expenses;
-        const margin = sell > 0 ? (net / sell) * 100 : 0;
-        const roi = fullCost > 0 ? (net / fullCost) * 100 : 0;
-        const payback = net > 0 ? fullCost / net : 0;
-        const profitMonth = net * units;
+function getLogisticsFormula(l, w, h) {
+  const vol = (l * w * h) / 1000;
+  if (vol <= 1) return `до 1 л → ${Math.round(vol*31)} ₽ (базовая ставка)`;
+  return `>${vol.toFixed(1)} л → 46₽ + ${(vol-1).toFixed(1)}×14₽`;
+}
 
-        const out = [
-          `💰 КАЛЬКУЛЯТОР: ${name}`,
-          `Цена продажи: ${fmtMoney(sell)} ₽`,
-          `Цена закупки: ${fmtMoney(buy)} ₽`,
-          `Единиц на бюджет: ${units} шт`,
-          ``,
-          `ВЫЧИТАЕМ:`,
-          `- Комиссия WB (15%): — ${fmtMoney(commission)} ₽`,
-          `- Логистика WB: — ${fmtMoney(logisticsWb)} ₽`,
-          `- Хранение: — ${fmtMoney(storage)} ₽`,
-          `- СПП (5%): — ${fmtMoney(spp)} ₽`,
-          `- Реклама (15%): — ${fmtMoney(ads)} ₽`,
-          `- Налог УСН ${Math.round(taxRate * 100)}%: — ${fmtMoney(tax)} ₽`,
-          `- Фулфилмент: — ${fmtMoney(50)} ₽`,
-          `- Прочие (/шт): — ${fmtMoney(otherPerUnit)} ₽`,
-          ``,
-          `Себестоимость (полная): ${fmtMoney(fullCost)} ₽`,
-          `Итого расходов: ${fmtMoney(expenses)} ₽`,
-          `ЧИСТАЯ ПРИБЫЛЬ: ${fmtMoney(net)} ₽/шт`,
-          ``,
-          `📊 Маржинальность: ${margin.toFixed(1)}%`,
-          `📈 ROI: ${roi.toFixed(1)}%`,
-          `⏱ Окупаемость: ${payback.toFixed(1)} мес`,
-          `💵 Прибыль в месяц: ~${fmtMoney(profitMonth)} ₽`,
-        ].join("\n");
+function getWHName(wh) {
+  return {moscow:'Москва', krasnodar:'Краснодар', tula:'Тула'}[wh];
+}
 
-        document.getElementById("calc-out").textContent = out;
-      });
+function fillAvgDims() {
+  const cat = document.getElementById('calc-category').value;
+  // Средние габариты по категориям (приблизительные)
+  const dims = {
+    clothes:[30,25,5], cosmetics:[15,10,8], home:[25,20,15],
+    electronics:[20,15,10], food:[20,15,10], chemistry:[30,20,15],
+    auto:[25,20,10], sport:[30,25,20], kids:[25,20,15],
+    pets:[20,15,10], tools:[30,20,15], books:[22,15,3],
+    jewelry:[12,8,5], garden:[30,25,20], other:[20,15,10]
+  };
+  const d = cat && dims[cat] ? dims[cat] : [20,15,10];
+  document.getElementById('calc-l').value = d[0];
+  document.getElementById('calc-w').value = d[1];
+  document.getElementById('calc-h').value = d[2];
+  calcVolume();
+}
 
-      // ===== МОДАЛЬНОЕ ОКНО "ПОДРОБНЕЕ" =====
+function selectWH(btn) {
+  document.querySelectorAll('.wh-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedWH = btn.dataset.wh;
+  calcVolume();
+}
 
-      const modalOverlay = document.createElement("div");
-      modalOverlay.id = "modal-overlay";
-      modalOverlay.className = "modal-overlay hidden";
-      modalOverlay.innerHTML = `
-        <div class="modal">
-          <div class="modal-header">
-            <h2 class="modal-title"></h2>
-            <button class="modal-close" type="button">×</button>
-          </div>
-          <div id="modal-body"></div>
-        </div>
-      `;
-      document.body.appendChild(modalOverlay);
+function toggleModel(el) {
+  el.classList.toggle('selected');
+}
 
-      const modalTitle = modalOverlay.querySelector(".modal-title");
-      const modalBody = modalOverlay.querySelector("#modal-body");
-      const modalClose = modalOverlay.querySelector(".modal-close");
+function onTaxTypeChange() {
+  const type = document.getElementById('calc-tax-type').value;
+  const ratesEl = document.getElementById('tax-rates');
+  if (type === 'osn') {
+    ratesEl.innerHTML = `
+      <div class="tax-opt" data-rate="13" onclick="selectTax(this)">13%</div>
+      <div class="tax-opt active" data-rate="20" onclick="selectTax(this)">20%</div>
+      <div class="tax-opt" data-rate="25" onclick="selectTax(this)">25%</div>`;
+    selectedTaxRate = 20;
+  } else {
+    ratesEl.innerHTML = `
+      <div class="tax-opt active" data-rate="6" onclick="selectTax(this)">6%</div>
+      <div class="tax-opt" data-rate="15" onclick="selectTax(this)">15%</div>
+      <div class="tax-opt" data-rate="25" onclick="selectTax(this)">25%</div>`;
+    selectedTaxRate = 6;
+  }
+  liveRecalc();
+}
 
-      function closeModal() {
-        modalOverlay.classList.add("hidden");
-        modalBody.innerHTML = "";
-      }
+function selectTax(el) {
+  document.querySelectorAll('.tax-opt').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  const custom = document.getElementById('calc-tax-custom');
+  if (el.dataset.rate === 'custom') {
+    custom.style.display = 'block';
+    selectedTaxRate = +custom.value || 0;
+  } else {
+    custom.style.display = 'none';
+    selectedTaxRate = +el.dataset.rate;
+  }
+  liveRecalc();
+}
 
-      modalClose.addEventListener("click", closeModal);
-      modalOverlay.addEventListener("click", (e) => {
-        if (e.target === modalOverlay) closeModal();
-      });
+function liveRecalc() {
+  // Just update volume display on dimension change
+  calcVolume();
+}
 
-      const DEMO_DETAILS = {
-        "🎯 Термос 500 мл нержавеющая сталь": {
-          niche: {
-            revenue: 42_000_000,
-            sellers: 120,
-            buyout_rate: 0.78,
-            trend: "growth",
-            seasonality: ["март", "апрель", "ноябрь"],
-            missed_revenue: 8_500_000,
-          },
-          competitors: [
-            { name: "Термос Арктика 106-500 стальной 500 мл", price: 1890, sales_per_month: 1200, rating: 4.8, buyout_rate: 0.76, article: 156789234 },
-            { name: "Термокружка LaPlaya Office 500 мл нержавеющая сталь", price: 1590, sales_per_month: 950, rating: 4.6, buyout_rate: 0.74, article: 198234567 },
-            { name: "Термос Biostal NBP-500 туристический 500 мл", price: 1390, sales_per_month: 780, rating: 4.7, buyout_rate: 0.72, article: 172456891 },
-          ],
-          verdict: "🟢 БРАТЬ",
-          verdict_color: "green",
-        },
-        "🎯 Набор органайзеров для кабелей 6 шт": {
-          niche: {
-            revenue: 15_000_000,
-            sellers: 80,
-            buyout_rate: 0.76,
-            trend: "growth",
-            seasonality: ["январь", "февраль", "сентябрь"],
-            missed_revenue: 1_800_000,
-          },
-          competitors: [
-            { name: "Органайзер для проводов Baseus Cube настольный", price: 1490, sales_per_month: 1100, rating: 4.7, buyout_rate: 0.74, article: 201234876 },
-            { name: "Органайзер сумка для кабелей UGREEN двойной чехол", price: 1690, sales_per_month: 830, rating: 4.8, buyout_rate: 0.72, article: 215678342 },
-            { name: "Органайзер для кабелей Xiaomi Youpin настенный набор", price: 1290, sales_per_month: 1500, rating: 4.6, buyout_rate: 0.71, article: 223891654 },
-          ],
-          verdict: "🟢 БРАТЬ",
-          verdict_color: "green",
-        },
-        "🎯 Силиконовая форма для кексов 6 ячеек": {
-          niche: {
-            revenue: 28_000_000,
-            sellers: 95,
-            buyout_rate: 0.75,
-            trend: "growth",
-            seasonality: ["декабрь", "январь", "март"],
-            missed_revenue: 4_200_000,
-          },
-          competitors: [
-            { name: "Форма силиконовая Доляна для кексов 6 ячеек", price: 890, sales_per_month: 1400, rating: 4.8, buyout_rate: 0.74, article: 256789234 },
-            { name: "Форма для кексов TimA силиконовая 12 ячеек", price: 1090, sales_per_month: 980, rating: 4.7, buyout_rate: 0.72, article: 261234567 },
-            { name: "Набор форм для выпечки Marmiton сердечки 6 шт", price: 1190, sales_per_month: 760, rating: 4.6, buyout_rate: 0.71, article: 278901456 },
-          ],
-          verdict: "🟢 БРАТЬ",
-          verdict_color: "green",
-        },
-        "🎯 Массажный роллер EVA 45 см": {
-          niche: {
-            revenue: 22_000_000,
-            sellers: 60,
-            buyout_rate: 0.82,
-            trend: "growth",
-            seasonality: ["февраль", "март", "апрель"],
-            missed_revenue: 3_300_000,
-          },
-          competitors: [
-            { name: "Массажный роллер Lite Weights EVA 45 см", price: 1590, sales_per_month: 870, rating: 4.7, buyout_rate: 0.78, article: 156789234 },
-            { name: "Роллер для пилатеса Starfit FA-502 60 см", price: 1890, sales_per_month: 720, rating: 4.8, buyout_rate: 0.75, article: 167890345 },
-            { name: "Массажный валик Bradex «Рельеф» 33 см", price: 1390, sales_per_month: 960, rating: 4.6, buyout_rate: 0.73, article: 178901456 },
-          ],
-          verdict: "🟢 БРАТЬ",
-          verdict_color: "green",
-        },
-        "🎯 Чехол для AirPods Pro с карабином": {
-          niche: {
-            revenue: 18_000_000,
-            sellers: 150,
-            buyout_rate: 0.74,
-            trend: "stable",
-            seasonality: ["сентябрь", "октябрь", "ноябрь"],
-            missed_revenue: 2_100_000,
-          },
-          competitors: [
-            { name: "Чехол силиконовый для AirPods Pro с карабином", price: 1290, sales_per_month: 2100, rating: 4.6, buyout_rate: 0.73, article: 301234567 },
-            { name: "Чехол ESR Hybrid для AirPods Pro TPU + пластик", price: 1490, sales_per_month: 980, rating: 4.7, buyout_rate: 0.72, article: 312345678 },
-            { name: "Чехол для AirPods Pro Spigen Rugged Armor", price: 1590, sales_per_month: 650, rating: 4.8, buyout_rate: 0.71, article: 323456789 },
-          ],
-          verdict: "🟢 БРАТЬ",
-          verdict_color: "green",
-        },
-      };
+function calcProfit() {
+  const cat = document.getElementById('calc-category').value;
+  const price = +document.getElementById('calc-price').value;
+  const cost = +document.getElementById('calc-cost').value;
+  const promo = +document.getElementById('calc-promo').value || 0;
+  const buyout = +document.getElementById('calc-buyout').value || 70;
+  const l = +document.getElementById('calc-l').value || 20;
+  const w = +document.getElementById('calc-w').value || 15;
+  const h = +document.getElementById('calc-h').value || 10;
+  const qty = 100; // расчёт на 100 шт для партийной логистики
+  const isHeavy = document.getElementById('calc-heavy').checked;
 
-      function verdictClass(color) {
-        if (color === "green") return "verdict-green";
-        if (color === "red") return "verdict-red";
-        return "verdict-yellow";
-      }
+  // Ручные расходы
+  const expAds      = +document.getElementById('exp-ads').value || 0;
+  const expTax      = +document.getElementById('exp-tax').value || 0;
+  const expFulfill  = +document.getElementById('exp-fulfill').value || 0;
+  const expOther    = +document.getElementById('exp-other').value || 0;
 
-      function attachCardHandlers() {
-        const moreBtns = results.querySelectorAll(".btn-more");
-        moreBtns.forEach((btn) => {
-          btn.addEventListener("click", () => {
-            const idx = parseInt(btn.dataset.idx || "0", 10);
-            const p = currentProducts[idx];
-            if (p) showModal(p);
-          });
-        });
-      }
+  if (!cat) { alert('Выберите категорию товара'); return; }
+  if (!price) { alert('Укажите цену продажи'); return; }
 
-      function showModal(p) {
-        const extra = DEMO_DETAILS[p.title] || {};
-        const niche = extra.niche || {};
-        const comps = extra.competitors || [];
-        const verdict = extra.verdict || "";
-        const vColor = extra.verdict_color || "yellow";
+  const c = CATEGORIES[cat];
+  const commission = c.commission / 100;
+  const commissionRub = Math.round(price * commission);
 
-        // ===== Юнит-экономика (проверенная формула) =====
-        const salePrice = Number(p.sale_price || 0);
-        const budget = Number(p._budget || 0);
-        const taxRate = Number(p._taxRate || 0.06);
-        // Закупку оцениваем как 20% от цены продажи (если не пришло с API)
-        const purchaseRub = Number(p.purchase_rub || Math.round(salePrice * 0.2));
+  // Логистика WB
+  const log = calcWBLogistics(l, w, h, selectedWH);
+  const wbLogistics = isHeavy ? Math.min(3000, Math.max(1000, log.price * 2)) : log.price;
 
-        // Константы (как в боте): рекомендуемый склад Москва — 90 ₽/шт
-        const COMMISSION_RATE = 0.15;
-        const LOGISTICS_WB = 90;
-        const STORAGE_WB = 15;
-        const SPP_RATE = 0.05;
-        const ADS_RATE = 0.15;
-        const LOGISTICS_CN = 56;
-        const FULFILLMENT = 50;
-        const OTHER_TOTAL = 15000;
+  // Обратная логистика (при не выкупе): 50₽ на склад ВБ
+  const reverseLog = 50;
+  // Эффективная логистика с учётом % выкупа
+  const buyoutRate = buyout / 100;
+  const effectiveLog = wbLogistics + reverseLog * (1 - buyoutRate);
 
-        // Себестоимость = закупка + Китай(56) + фулфилмент(50)
-        const costPerUnit = purchaseRub + LOGISTICS_CN + FULFILLMENT;
+  // Комиссия на продвижение
+  const promoRub = Math.round(price * promo / 100);
 
-        // Кол-во единиц на бюджет
-        const units = costPerUnit > 0 ? Math.floor(budget / costPerUnit) : 0;
-        const otherPerUnit = units > 0 ? OTHER_TOTAL / units : OTHER_TOTAL;
+  // Налог с оборота
+  const taxRub = selectedTaxRate > 0 ? Math.round(price * selectedTaxRate / 100) : 0;
 
-        // Расходы на продажу (без себестоимости!)
-        const commission = salePrice * COMMISSION_RATE;
-        const spp = salePrice * SPP_RATE;
-        const ads = salePrice * ADS_RATE;
-        const tax = salePrice * taxRate;
-        const expensesTotal =
-          commission +
-          LOGISTICS_WB +
-          STORAGE_WB +
-          spp +
-          ads +
-          tax +
-          otherPerUnit;
+  // Итого расходы
+  const totalExpenses = cost + commissionRub + effectiveLog + promoRub + expAds + expFulfill + expOther + (expTax || taxRub);
+  const profit = price - totalExpenses;
+  const margin = price > 0 ? Math.round(profit / price * 100) : 0;
+  const roi = cost > 0 ? Math.round(profit / cost * 100) : 0;
 
-        // Чистая прибыль
-        const netProfitPerUnit = salePrice - costPerUnit - expensesTotal;
-        const marginPercent =
-          salePrice > 0 ? (netProfitPerUnit / salePrice) * 100 : 0;
-        const roiPercent =
-          costPerUnit > 0 ? (netProfitPerUnit / costPerUnit) * 100 : 0;
+  // Логистика Китай
+  const chinaLog = calcChinaLogistics(l, w, h, qty);
 
-        // Прибыль/мес и окупаемость
-        const profitPerMonth = netProfitPerUnit * units;
-        const batchCost = costPerUnit * units;
-        const paybackMonths =
-          profitPerMonth > 0 ? batchCost / profitPerMonth : 0;
+  const el = document.getElementById('calc-result');
 
-        let verdictAuto = "🟡 РИСК";
-        let verdictColorAuto = "yellow";
-        if (marginPercent > 25 && roiPercent > 60) {
-          verdictAuto = "🟢 БРАТЬ";
-          verdictColorAuto = "green";
-        } else if (marginPercent < 15 || roiPercent < 30) {
-          verdictAuto = "🔴 НЕ БРАТЬ";
-          verdictColorAuto = "red";
-        }
+  const marginColor = margin > 25 ? 'var(--green)' : margin > 10 ? 'var(--yellow)' : 'var(--red)';
+  const marginFill = Math.max(0, Math.min(100, margin));
 
-        const verdictFinal = verdict || verdictAuto;
-        const verdictColorFinal = verdict ? vColor : verdictColorAuto;
+  el.innerHTML = `
+    <!-- ИТОГ -->
+    <div class="result-card">
+      <div class="result-title">📊 Юнит-экономика · ${c.name}</div>
+      <div class="profit-big" style="color:${marginColor}">${profit > 0 ? '+' : ''}${fmtNum(profit)} ₽</div>
+      <div style="font-size:13px;text-align:center;color:var(--muted);margin-bottom:8px">прибыль с 1 шт</div>
+      <div class="margin-bar"><div class="margin-fill" style="width:${marginFill}%;background:${marginColor}"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)">
+        <span>Маржа: <strong style="color:${marginColor}">${margin}%</strong></span>
+        <span>ROI: <strong style="color:${marginColor}">${roi}%</strong></span>
+      </div>
+    </div>
 
-        modalTitle.textContent = p.title;
+    <!-- РАСХОДЫ ДЕТАЛЬНО -->
+    <div class="result-card">
+      <div class="result-title">💸 Расходы на единицу товара</div>
+      <div class="result-row"><span class="result-lbl">Цена продажи</span><span class="result-val">${fmtNum(price)} ₽</span></div>
+      <div class="result-row"><span class="result-lbl">— Себестоимость</span><span class="result-val red">−${fmtNum(cost)} ₽</span></div>
+      <div class="result-row"><span class="result-lbl">— Комиссия WB (${c.commission}%)</span><span class="result-val red">−${fmtNum(commissionRub)} ₽</span></div>
+      <div class="result-row"><span class="result-lbl">— Логистика WB (${log.vol}л, ${getWHName(selectedWH)})</span><span class="result-val red">−${fmtNum(Math.round(effectiveLog))} ₽</span></div>
+      ${promo ? `<div class="result-row"><span class="result-lbl">— Продвижение (${promo}%)</span><span class="result-val red">−${fmtNum(promoRub)} ₽</span></div>` : ''}
+      <div class="result-row"><span class="result-lbl">— Реклама (ручн.)</span><span class="result-val red">−${fmtNum(expAds)} ₽</span></div>
+      <div class="result-row"><span class="result-lbl">— Фулфилмент (ручн.)</span><span class="result-val red">−${fmtNum(expFulfill)} ₽</span></div>
+      <div class="result-row"><span class="result-lbl">— Налог (ручн. или авто)</span><span class="result-val red">−${fmtNum(expTax||taxRub)} ₽</span></div>
+      <div class="result-row"><span class="result-lbl">— Прочие (ручн.)</span><span class="result-val red">−${fmtNum(expOther)} ₽</span></div>
+      <div class="result-total">
+        <span>Прибыль / шт</span>
+        <span style="color:${marginColor}">${profit > 0 ? '+' : ''}${fmtNum(profit)} ₽</span>
+      </div>
+    </div>
 
-        const season =
-          (niche.seasonality && niche.seasonality.join(", ")) || "—";
-        const trendSymbol =
-          niche.trend === "growth"
-            ? "▲ РОСТ"
-            : niche.trend === "fall"
-            ? "▼ ПАДЕНИЕ"
-            : "→ СТАБИЛЬНО";
+    <!-- СКЛАДЫ -->
+    <div class="result-card">
+      <div class="result-title">🏭 Логистика WB по складам (${log.vol} л)</div>
+      ${['moscow','krasnodar','tula'].map(wh => {
+        const lg = calcWBLogistics(l, w, h, wh);
+        return `<div class="result-row"><span class="result-lbl">${getWHName(wh)}</span><span class="result-val ${wh===selectedWH?'yellow':''}">${lg.price} ₽/шт ${wh===selectedWH?'← выбран':''}</span></div>`;
+      }).join('')}
+      <div style="font-size:11px;color:var(--muted2);margin-top:8px;line-height:1.6">
+        С учётом коэф. склада. Актуальные тарифы с 15.09.2025.<br>
+        Обратная логистика (невыкуп): 50 ₽/шт на склад ВБ.
+      </div>
+    </div>
 
-        const compsHtml =
-          comps.length === 0
-            ? "<div class=\"muted\">Нет данных по конкурентам.</div>"
-            : comps
-                .slice(0, 3)
-                .map(
-                  (c, i) => {
-                    const art = c.article || c.nm_id;
-                    const articleStr = art ? String(parseInt(art, 10) || "") : "";
-                    const wbLink = articleStr
-                      ? `https://www.wildberries.ru/catalog/${articleStr}/detail.aspx`
-                      : "";
-                    return `
-            <div>
-              <b>${i + 1}. ${c.name}</b><br/>
-              ${articleStr ? `🔢 Артикул WB: ${articleStr}<br/>` : ""}
-              ${wbLink ? `🔗 <a href="${wbLink}" target="_blank" rel="noopener" style="color:var(--green);">[Открыть на WB]</a><br/>` : ""}
-              💰 Цена: ${fmtMoney(c.price)} ₽<br/>
-              📦 Продаж: ${fmtMoney(c.sales_per_month)} шт/мес<br/>
-              💵 Выручка: ${fmtMoney(
-                (c.price || 0) * (c.sales_per_month || 0)
-              )} ₽/мес<br/>
-              ⭐ Рейтинг: ${(c.rating ?? 0).toFixed(1)}<br/>
-              🔄 Выкуп: ${Math.round((c.buyout_rate ?? niche.buyout_rate ?? 0) * 100)}%
-            </div>
-          `;
-                  }
-                )
-                .join("<hr style=\"border:none;border-top:1px solid #30363d;margin:6px 0;\"/>");
+    <!-- ПАРТИЯ -->
+    <div class="result-card">
+      <div class="result-title">📦 Партия 100 шт</div>
+      <div class="result-row"><span class="result-lbl">Выручка (100% выкуп)</span><span class="result-val">${fmtNum(price * 100)} ₽</span></div>
+      <div class="result-row"><span class="result-lbl">Прибыль (при ${buyout}% выкупа)</span><span class="result-val green">+${fmtNum(Math.round(profit * buyoutRate * 100))} ₽</span></div>
+      <div class="result-row"><span class="result-lbl">Затраты на партию</span><span class="result-val red">−${fmtNum(totalExpenses * 100)} ₽</span></div>
+    </div>
 
-        const vHtml = verdictFinal
-          ? `<span class="verdict-tag ${verdictClass(
-              verdictColorFinal
-            )}">${verdictFinal}</span>`
-          : "";
+    <!-- ЛОГИСТИКА КИТАЙ -->
+    ${chinaLog ? `
+    <div class="china-section">
+      <div class="china-title">🇨🇳 Логистика Китай → Россия</div>
+      <div style="font-size:11px;color:var(--muted2);margin-bottom:8px;line-height:1.5">
+        Средние тарифы 2025 · Сборный груз · Авто/ЖД · ~380$/м³ (~34 800₽/м³)<br>
+        Объём 1 шт: ${(chinaLog.vol_per_item * 1000000).toFixed(1)} л = ${chinaLog.vol_per_item.toFixed(4)} м³
+      </div>
+      <div class="china-row">
+        <span style="color:var(--muted2)">На 1 шт (малая партия)</span>
+        <span style="font-weight:700;color:var(--blue)">${fmtNum(chinaLog.per_item)} ₽</span>
+      </div>
+      <div class="china-row">
+        <span style="color:var(--muted2)">На 1 шт (партия ${qty} шт, ${(chinaLog.total_vol).toFixed(2)} м³)</span>
+        <span style="font-weight:700;color:var(--green)">${fmtNum(chinaLog.per_item_bulk)} ₽</span>
+      </div>
+      <div class="china-row" style="border:none">
+        <span style="color:var(--muted2)">Итого партия ${qty} шт</span>
+        <span style="font-weight:700;color:var(--blue)">${fmtNum(chinaLog.total)} ₽</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted2);margin-top:8px;line-height:1.6">
+        ⚠️ Без учёта таможни и НДС. С растаможкой +30-50% к стоимости доставки.
+        Скидка при объёме &gt;1м³: −10%, &gt;3м³: −15%.
+      </div>
+    </div>` : ''}
 
-        modalBody.innerHTML = `
-          <div class="modal-section">
-            <h3>🏭 ЛОКАЛИЗАЦИЯ</h3>
-            <div>Рекомендуемый склад: Москва</div>
-            <div>Индекс локализации: 78%</div>
-            <div>Логистика: ${LOGISTICS_WB} ₽/шт</div>
-          </div>
-          <div class="modal-section">
-            <h3>Данные ниши</h3>
-            <div>💵 Выручка ниши: ${fmtMoney(
-              niche.revenue ?? p.niche_revenue
-            )} ₽/мес</div>
-            <div>👨‍💼 Продавцов: ${fmtMoney(niche.sellers ?? 0)}</div>
-            <div>🔄 % выкупа: ${Math.round(
-              (niche.buyout_rate ?? 0) * 100
-            )}%</div>
-            <div>📈 Тренд: ${trendSymbol}</div>
-            <div>📆 Сезонность: ${season}</div>
-            <div>✅ Монополист: ${p.monopolist ? "ДА" : "НЕТ"}</div>
-            <div>💸 Упущенная выручка: ${fmtMoney(niche.missed_revenue ?? 0)} ₽/мес</div>
-          </div>
-          <div class="modal-section">
-            <h3>Топ-3 конкурента</h3>
-            ${compsHtml}
-          </div>
-          <div class="modal-section">
-            <h3>Закупка на 1688</h3>
-            <div>
-              <a href="${p.china_url ||
-                "#"}" target="_blank" style="color: var(--green); text-decoration: none;">
-                Открыть поиск поставщиков 🇨🇳
-              </a>
-            </div>
-          </div>
-          <div class="modal-section">
-            <h3>Юнит-экономика</h3>
-            <div><b>Цена продажи:</b> ${fmtMoney(salePrice)} ₽</div>
-            <div><b>Цена закупки:</b> ${fmtMoney(purchaseRub)} ₽</div>
-            <div><b>Единиц на бюджет:</b> ${fmtMoney(units)} шт</div>
-            <div style="margin-top: 6px"><b>Вычитаем:</b></div>
-            <div>- Комиссия WB (15%): — ${fmtMoney(commission)} ₽</div>
-            <div>- Логистика WB: — ${fmtMoney(LOGISTICS_WB)} ₽</div>
-            <div>- Хранение: — ${fmtMoney(STORAGE_WB)} ₽</div>
-            <div>- СПП (5%): — ${fmtMoney(spp)} ₽</div>
-            <div>- Реклама (15%): — ${fmtMoney(ads)} ₽</div>
-            <div>- Налог УСН ${Math.round(taxRate * 100)}%: — ${fmtMoney(tax)} ₽</div>
-            <div>- Прочие (/шт): — ${fmtMoney(otherPerUnit)} ₽</div>
-            <div style="margin-top: 6px"><b>Себестоимость:</b> ${fmtMoney(costPerUnit)} ₽/шт</div>
-            <div><b>Итого расходов:</b> ${fmtMoney(expensesTotal)} ₽</div>
-            <div><b>Чистая прибыль:</b> ${fmtMoney(netProfitPerUnit)} ₽/шт</div>
-            <div style="margin-top: 6px">
-              📊 Маржа: ${marginPercent.toFixed(1)}% |
-              ROI: ${roiPercent.toFixed(1)}% |
-              ⏱ Окупаемость: ${paybackMonths.toFixed(1)} мес
-            </div>
-            <div>💵 Прибыль/мес: ~${fmtMoney(profitPerMonth)} ₽</div>
-          </div>
-          <div class="modal-section">
-            <h3>Вердикт</h3>
-            <div>${vHtml || "<span class='muted'>Нет данных по вердикту.</span>"}</div>
-          </div>
-        `;
+    <!-- РЕКОМЕНДАЦИЯ -->
+    <div class="result-card" style="border-color:${marginColor}40">
+      <div class="result-title">💡 Вывод</div>
+      <div style="font-size:13px;line-height:1.7;color:var(--muted2)">
+        ${margin > 25 ? `✅ <strong style="color:var(--green)">Хорошая маржинальность.</strong> Товар перспективен для выхода на WB.` :
+          margin > 10 ? `⚠️ <strong style="color:var(--yellow)">Средняя маржинальность.</strong> Нужно оптимизировать расходы или цену.` :
+          margin > 0 ? `⚠️ <strong style="color:var(--yellow)">Низкая маржинальность.</strong> Повысьте цену или снизьте себестоимость.` :
+          `❌ <strong style="color:var(--red)">Товар убыточен.</strong> При текущих параметрах продажи нецелесообразны.`}
+        <br><br>
+        Маржа ${margin}% · ROI ${roi}% · Выкуп ${buyout}%
+      </div>
+    </div>`;
 
-        modalOverlay.classList.remove("hidden");
-      }
-    </script>
-  </body>
+  el.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+// ══════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════
+function fmtNum(n) {
+  return Math.round(n).toLocaleString('ru-RU');
+}
+</script>
+</body>
 </html>
-
