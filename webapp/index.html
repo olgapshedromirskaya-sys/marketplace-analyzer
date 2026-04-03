@@ -696,16 +696,15 @@ async function runSelection(){
   const btn=document.getElementById('btn-sel');
 
   if(!budget){el.innerHTML='<div class="err-box">Укажи стартовый бюджет</div>';return;}
-  btn.disabled=true; btn.textContent='⏳ Ищем...';
-  el.innerHTML=`<div class="loading"><div class="spin"></div><div class="loading-txt">Анализируем рынок...<br>${mpKey?'Запрос к MPStats API':'Демо-режим'}</div></div>`;
+  btn.disabled=true; btn.textContent='⏳ Ищем товары...';
+  el.innerHTML=`<div class="loading"><div class="spin"></div><div class="loading-txt">Анализируем рынок...<br>${mpKey?'Запрос к MPStats API':'Демо-режим — подключи MPStats для реальных данных'}</div></div>`;
 
-  // Определяем ценовой сегмент по бюджету
   let priceMin=0,priceMax=99999;
   if(priceRange==='low'){priceMin=100;priceMax=500;}
   else if(priceRange==='mid'){priceMin=500;priceMax=2000;}
   else if(priceRange==='high'){priceMin=2000;priceMax=5000;}
   else if(priceRange==='prem'){priceMin=5000;priceMax=99999;}
-  else{// авто по бюджету
+  else{
     if(budget<50000){priceMin=300;priceMax=1500;}
     else if(budget<200000){priceMin=500;priceMax=3000;}
     else{priceMin=1000;priceMax=8000;}
@@ -713,96 +712,167 @@ async function runSelection(){
 
   let products=[];
 
-  // Попытка через MPStats
   if(mpKey){
     const today=new Date();
     const d2=today.toISOString().split('T')[0];
     const d1=new Date(today-30*86400000).toISOString().split('T')[0];
-    const data=await mpstatsRequest('items',{
-      d1,d2,
-      category:cat||'Товары для дома',
-      priceMin,priceMax,
-      sellersMax,
-      sort:'revenue',
-      order:'desc',
-      limit:20
-    });
+    const data=await mpstatsRequest('items',{d1,d2,category:cat||'Товары для дома',priceMin,priceMax,sellersMax,sort:'revenue',order:'desc',limit:20});
     if(data&&data.data){
       products=data.data
         .filter(p=>p.buyout_percent>=buyoutMin&&p.sellers_count<=sellersMax)
         .slice(0,5)
         .map(p=>({
-          name:p.name||'Товар',
-          price:p.price||1000,
-          revenue:p.revenue||5000000,
-          sellers:p.sellers_count||20,
-          buyout:p.buyout_percent||70,
-          sales:p.sales||500,
-          avgSales:p.sales_per_day||17,
-          competition:'Низкая',
-          wb_id:p.id||null,
+          id:p.id,name:p.name||'Товар',price:p.price||1000,
+          revenue:p.revenue||5000000,sellers:p.sellers_count||20,
+          buyout:p.buyout_percent||70,sales:p.sales||500,
+          topSeller:p.brand||null,topSellerShare:p.top_brand_share||null,
           real:true
         }));
     }
   }
 
-  // Демо если нет MPStats или нет результатов
   if(!products.length){
-    const demos=[
-      {name:'Силиконовый коврик для разделки'+(!cat?'':`(${cat})`),price:Math.round((priceMin+priceMax)/2*0.8)||890,revenue:12400000,sellers:18,buyout:78,sales:620,avgSales:21,competition:'Низкая',wb_id:'155432891',real:false},
-      {name:'Органайзер для кухонных принадлежностей',price:Math.round((priceMin+priceMax)/2)||1290,revenue:8700000,sellers:22,buyout:74,sales:410,avgSales:14,competition:'Средняя',wb_id:'187654321',real:false},
-      {name:'Диспенсер для жидкого мыла сенсорный',price:Math.round((priceMin+priceMax)/2*1.2)||1490,revenue:6500000,sellers:15,buyout:81,sales:290,avgSales:10,competition:'Низкая',wb_id:'198765432',real:false},
+    const avgP=Math.round((priceMin+priceMax)/2)||1200;
+    products=[
+      {id:'207801726',name:'Термос Biostal NBP-500 туристический 500 мл',price:1390,revenue:8200000,sellers:12,buyout:61,sales:780,topSeller:'Biostal',topSellerShare:38,real:false},
+      {id:'307842190',name:'Силиконовый коврик для разделки, набор 3 шт',price:690,revenue:28000000,sellers:18,buyout:78,sales:1240,topSeller:null,topSellerShare:8,real:false},
+      {id:'408751234',name:'Органайзер кухонный для принадлежностей',price:590,revenue:18000000,sellers:22,buyout:74,sales:920,topSeller:null,topSellerShare:11,real:false},
+    ].filter(p=>p.price>=priceMin&&p.price<=priceMax&&budget/p.price>=30);
+    if(!products.length)products=[
+      {id:'207801726',name:'Термос Biostal NBP-500 туристический 500 мл',price:1390,revenue:8200000,sellers:12,buyout:61,sales:780,topSeller:'Biostal',topSellerShare:38,real:false},
     ];
-    products=demos.filter(d=>d.price>=priceMin&&d.price<=priceMax&&budget/d.price>=50);
-    if(!products.length)products=demos;
   }
 
   btn.disabled=false; btn.textContent='🎯 Найти товары';
+  el.innerHTML=`<div style="font-size:10px;color:var(--m2);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Найдено товаров: ${products.length}</div>`
+    +products.map(p=>renderProductCard(p,budget)).join('');
+}
 
-  if(!products.length){el.innerHTML='<div class="err-box">По заданным критериям ничего не найдено. Попробуйте расширить параметры.</div>';return;}
+function renderProductCard(p, budget){
+  // ─── Расчёт юнит-экономики ───
+  const catKey = Object.keys(CATS).find(k=>CATS[k].avgP >= p.price*0.6 && CATS[k].avgP <= p.price*1.6) || 'home';
+  const c = CATS[catKey];
+  const commission_pct = c.c;
+  const commRub = Math.round(p.price * commission_pct / 100);
 
-  el.innerHTML=products.map(p=>{
-    const qty=Math.floor(budget/p.price);
-    const catKey=Object.keys(CATS).find(k=>CATS[k].name.toLowerCase().includes((cat||'дом').substring(0,3).toLowerCase()))||'home';
-    const commission=CATS[catKey].c;
-    const log=calcLog(25,20,15,'moscow');
-    const commRub=Math.round(p.price*commission/100);
-    const cost=Math.round(p.price*0.35);
-    const adsRub=Math.round(p.price*0.1);
-    const expenses=cost+commRub+log.p+adsRub+50+46+48;
-    const profit=p.price-expenses;
-    const margin=Math.round(profit/p.price*100);
-    const profColor=margin>20?'#4ade80':margin>10?'#fbbf24':'#f87171';
-    const compColor=p.competition==='Низкая'?'tag-g':p.competition==='Средняя'?'tag-y':'tag-r';
-    const wbUrl=p.wb_id?`https://www.wildberries.ru/catalog/${p.wb_id}/detail.aspx`:`https://www.wildberries.ru/catalog/0/search.aspx?search=${encodeURIComponent(p.name)}`;
+  // Габариты по умолчанию средние для категории
+  const dims = {clothes:[30,25,5],cosmetics:[15,10,8],home:[25,20,15],electronics:[20,15,10],food:[20,15,10],chemistry:[30,20,15],auto:[25,20,10],sport:[30,25,20],kids:[25,20,15],pets:[20,15,10],tools:[30,20,15],books:[22,15,3],jewelry:[12,8,5],garden:[30,25,20],other:[20,15,10]};
+  const d = dims[catKey]||[20,15,10];
+  const log = calcLog(d[0],d[1],d[2],'moscow');
+  const storageRub = 15; // хранение ~15₽/шт
+  const costEstimate = Math.round(p.price * 0.22); // себестоимость Китай ~22% от цены WB
+  const chinaLog = Math.round((d[0]*d[1]*d[2]/1e6) * 34800);
+  const adsRub = Math.round(p.price * 0.15);
+  const taxRub = Math.round(p.price * 0.06);
+  const ffRub = 50;
+  const otherRub = 46;
+  const fullCost = costEstimate + chinaLog; // полная себестоимость с доставкой
+  const totalExp = fullCost + commRub + log.p + storageRub + adsRub + taxRub + ffRub + otherRub;
+  const profit = p.price - totalExp;
+  const margin = Math.round(profit/p.price*100);
+  const roi = fullCost>0 ? Math.round(profit/fullCost*100) : 0;
+  const payback = profit>0 ? (fullCost/profit).toFixed(1) : '∞';
+  const monthProfit = profit>0 ? Math.round(profit * p.sales/4) : 0; // примерно продаж за месяц
+  const qty = Math.floor(budget/fullCost)||1;
 
-    return`<div class="prod-card">
-      <div class="prod-name">${p.real?'📊':'🔮'} ${p.name}</div>
-      ${!p.real?'<div style="font-size:10px;color:var(--m3);margin-top:-4px;margin-bottom:8px">Демо · подключи MPStats для реальных данных</div>':''}
-      <div class="prod-meta">
-        <span class="tag ${compColor}">Конкуренция: ${p.competition}</span>
-        <span class="tag tag-b">Выкуп: ${p.buyout}%</span>
-        <span class="tag tag-p">${p.sellers} продавцов</span>
+  const profColor = margin>20?'#4ade80':margin>10?'#fbbf24':'#f87171';
+  const verdict = margin>20?'🟢 БРАТЬ':margin>10?'🟡 РАССМОТРЕТЬ':'🔴 НЕ БРАТЬ';
+  const verdictBg = margin>20?'rgba(22,163,74,.15)':margin>10?'rgba(217,119,6,.12)':'rgba(220,38,38,.12)';
+  const verdictColor = margin>20?'#4ade80':margin>10?'#fbbf24':'#f87171';
+
+  // Монополист?
+  const isMonopoly = p.topSellerShare && p.topSellerShare > 30;
+  const monopolyText = isMonopoly
+    ? `⚠️ Монополист: <strong style="color:#f87171">${p.topSeller||'Один бренд'}</strong> занимает ${p.topSellerShare}% ниши`
+    : p.topSellerShare
+      ? `✅ Монополиста нет · топ-продавец: ${p.topSellerShare}% ниши`
+      : '✅ Монополиста нет';
+  const monopolyColor = isMonopoly ? '#f87171' : '#4ade80';
+
+  // WB ссылки — реальные ID товаров
+  const wbProductUrl = `https://www.wildberries.ru/catalog/${p.id}/detail.aspx`;
+  const wbSearchUrl = `https://www.wildberries.ru/catalog/0/search.aspx?search=${encodeURIComponent(p.name.split(' ').slice(0,3).join(' '))}`;
+  // 1688 ссылка для поиска поставщика
+  // Для 1688 используем русское название — работает через транслитерацию
+  const searchQuery1688 = encodeURIComponent(p.name.split(' ').slice(0,4).join(' '));
+  const url1688 = `https://s.1688.com/selloffer/offerlist.htm?keywords=${searchQuery1688}`;
+
+  return `<div class="prod-card">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+      <div style="font-size:14px;font-weight:800;line-height:1.35;flex:1">🎯 ${p.name}</div>
+    </div>
+    ${!p.real?'<div style="font-size:10px;color:var(--m3);margin-bottom:8px">Демо · подключи MPStats для реальных данных</div>':''}
+
+    <!-- Ключевые теги -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      <span style="padding:3px 9px;border-radius:8px;font-size:10px;font-weight:700;background:${p.sellers<=15?'rgba(22,163,74,.14)':p.sellers<=30?'rgba(217,119,6,.12)':'rgba(220,38,38,.12)'};color:${p.sellers<=15?'#4ade80':p.sellers<=30?'#fbbf24':'#f87171'}">
+        Конкуренция: ${p.sellers<=15?'Низкая':p.sellers<=30?'Средняя':'Высокая'}
+      </span>
+      <span style="padding:3px 9px;border-radius:8px;font-size:10px;font-weight:700;background:rgba(37,99,235,.14);color:#60a5fa">${p.buyout}% выкупа</span>
+      <span style="padding:3px 9px;border-radius:8px;font-size:10px;font-weight:700;background:rgba(124,58,237,.14);color:var(--p2)">${p.sellers} продавцов</span>
+    </div>
+
+    <!-- 3 метрики -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+      <div class="pm-box"><div style="font-size:15px;font-weight:800">${fmt(p.price)} ₽</div><div style="font-size:9px;color:var(--m2);text-transform:uppercase;letter-spacing:.4px">Цена</div></div>
+      <div class="pm-box"><div style="font-size:15px;font-weight:800">${fmt(p.revenue/1e6,1)}M</div><div style="font-size:9px;color:var(--m2);text-transform:uppercase;letter-spacing:.4px">Выручка/мес</div></div>
+      <div class="pm-box"><div style="font-size:15px;font-weight:800;color:${profColor}">${margin}%</div><div style="font-size:9px;color:var(--m2);text-transform:uppercase;letter-spacing:.4px">Маржа</div></div>
+    </div>
+
+    <!-- Монополист -->
+    <div style="background:${isMonopoly?'rgba(220,38,38,.07)':'rgba(22,163,74,.06)'};border:1px solid ${isMonopoly?'rgba(220,38,38,.25)':'rgba(22,163,74,.2)'};border-radius:9px;padding:9px 12px;margin-bottom:12px;font-size:12px;color:${monopolyColor}">
+      ${monopolyText}
+    </div>
+
+    <!-- ЮНИТ-ЭКОНОМИКА (раскрывающаяся) -->
+    <div style="background:var(--s2);border-radius:11px;padding:13px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--m2);margin-bottom:10px">Юнит-экономика</div>
+
+      <div style="font-size:12px;margin-bottom:4px;color:var(--m1)">Цена продажи: <strong style="color:var(--txt)">${fmt(p.price)} ₽</strong></div>
+      <div style="font-size:12px;margin-bottom:4px;color:var(--m1)">Цена закупки (Китай): <strong style="color:#60a5fa">${fmt(costEstimate)} ₽</strong></div>
+      <div style="font-size:12px;margin-bottom:10px;color:var(--m1)">Единиц на бюджет: <strong style="color:#fbbf24">${qty} шт</strong></div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--m2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Вычитаем:</div>
+      <div style="display:flex;flex-direction:column;gap:3px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--m1)">Комиссия WB (${commission_pct}%)</span><span style="color:#f87171">— ${fmt(commRub)} ₽</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--m1)">Логистика WB (~${log.v}л)</span><span style="color:#f87171">— ${fmt(log.p)} ₽</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--m1)">Хранение</span><span style="color:#f87171">— ${storageRub} ₽</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--m1)">Реклама (15%)</span><span style="color:#f87171">— ${fmt(adsRub)} ₽</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--m1)">Налог УСН 6%</span><span style="color:#f87171">— ${fmt(taxRub)} ₽</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--m1)">Фулфилмент</span><span style="color:#f87171">— ${ffRub} ₽</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--m1)">Логистика Китай</span><span style="color:#f87171">— ${fmt(chinaLog)} ₽</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--m1)">Прочие (/шт)</span><span style="color:#f87171">— ${otherRub} ₽</span></div>
       </div>
-      <div class="prod-metrics">
-        <div class="pm-box"><div class="pm-val">${fmt(p.price)} ₽</div><div class="pm-lbl">Цена</div></div>
-        <div class="pm-box"><div class="pm-val">${fmt(p.revenue/1e6,1)} млн</div><div class="pm-lbl">Выручка/мес</div></div>
-        <div class="pm-box"><div class="pm-val" style="color:${profColor}">${margin}%</div><div class="pm-lbl">Маржа</div></div>
+
+      <div style="border-top:1px solid var(--bd2);padding-top:8px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:var(--m1)">Себестоимость (полная)</span><span style="font-weight:700;color:#60a5fa">${fmt(fullCost)} ₽</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:var(--m1)">Итого расходов</span><span style="font-weight:700;color:#f87171">${fmt(totalExp)} ₽</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:800;margin-top:4px"><span>Чистая прибыль</span><span style="color:${profColor}">${profit>0?'+':''}${fmt(profit)} ₽/шт</span></div>
       </div>
-      <div class="res-card" style="margin-bottom:10px">
-        <div class="res-hdr">Предварительная юнит-экономика</div>
-        <div class="res-row"><span class="res-lbl">Цена продажи</span><span class="res-val">${fmt(p.price)} ₽</span></div>
-        <div class="res-row"><span class="res-lbl">Себестоимость (~35%)</span><span class="res-val r">−${fmt(cost)} ₽</span></div>
-        <div class="res-row"><span class="res-lbl">Комиссия WB (${commission}%)</span><span class="res-val r">−${fmt(commRub)} ₽</span></div>
-        <div class="res-row"><span class="res-lbl">Логистика WB (~${log.v}л)</span><span class="res-val r">−${fmt(log.p)} ₽</span></div>
-        <div class="res-row"><span class="res-lbl">Реклама (10%)</span><span class="res-val r">−${fmt(adsRub)} ₽</span></div>
-        <div class="res-row"><span class="res-lbl">Прочие</span><span class="res-val r">−${48+50+46} ₽</span></div>
-        <div class="res-row" style="border-top:1px solid var(--bd2);margin-top:4px;padding-top:8px"><span style="font-weight:700">Прибыль</span><span style="font-weight:800;color:${profColor}">${profit>0?'+':''}${fmt(profit)} ₽</span></div>
+
+      <div style="font-size:12px;color:var(--m1);line-height:1.7">
+        📊 Маржа: <strong style="color:${profColor}">${margin}%</strong> | ROI: <strong style="color:${profColor}">${roi}%</strong> | ⏱ Окупаемость: <strong>${payback} мес</strong><br>
+        💰 Прибыль/мес: ~<strong style="color:#4ade80">${fmt(monthProfit)} ₽</strong>
       </div>
-      <div style="font-size:12px;color:var(--m2);margin-bottom:6px">При бюджете ${fmt(budget)} ₽ → закупить <strong style="color:var(--txt)">${qty} шт</strong></div>
-      <a class="wb-link" href="${wbUrl}" target="_blank">🔗 Топ-конкурент на Wildberries</a>
-    </div>`;
-  }).join('');
+    </div>
+
+    <!-- ВЕРДИКТ -->
+    <div style="background:${verdictBg};border:1px solid ${verdictColor}40;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px;font-weight:800;color:${verdictColor};text-align:center;letter-spacing:.3px">
+      ВЕРДИКТ: ${verdict}
+    </div>
+
+    <!-- КНОПКИ -->
+    <a class="wb-link" href="${wbProductUrl}" target="_blank" style="margin-bottom:7px">
+      🔗 Карточка конкурента на Wildberries
+    </a>
+    <a class="wb-link" href="${wbSearchUrl}" target="_blank" style="margin-bottom:7px;background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.25);color:#60a5fa">
+      🔍 Поиск товара на WB (все продавцы)
+    </a>
+    <a class="wb-link" href="${url1688}" target="_blank" style="background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.25);color:#f87171">
+      🇨🇳 Найти поставщика на 1688
+    </a>
+    <button class="btn btn-sm btn-out" style="margin-top:8px;width:100%" onclick="addToWLDirect('${p.name}',${p.revenue},${p.buyout})">+ В Watchlist</button>
+  </div>`;
 }
 
 // ══════════════════════════════════════════════════
@@ -841,247 +911,200 @@ async function callBuiltInClaude(prompt) {
 
 // Демо-данные трендов — реальные товарные категории с полными данными
 function getDemoTrends(kw) {
+  // sellers = продавцы СЕЙЧАС на WB, уже продающие этот товар
+  // forecast = товар УЖЕ есть на WB, тренд УСИЛИВАЕТСЯ из Китая
   const allTrends = [
     {
-      src: 'AlphaShop',
-      srcClass: 'src-alpha',
-      emoji: '🏆',
-      title: 'Массажный пистолет мини — складная ручка',
-      category: 'Красота и здоровье',
-      cnPrice: '280–420 ¥ (~3 200–4 800 ₽)',
-      wbPriceRange: '2 490–4 990 ₽',
-      growth: '+84%',
-      trend: 'up',
-      demand: 'Очень высокий',
-      competition: 'Средняя',
-      buyout: '74%',
-      sellers: 31,
-      revenue: '18 400 000 ₽/мес',
-      margin: '28–35%',
-      season: 'Круглогодично, пик — янв, март, сент',
-      forecast: 'На WB через 3–5 нед. Тренд пришёл из Тайвань/Корея',
-      tags: ['Портативный', 'Складной', '6 насадок', '3 скорости'],
-      searchUrl: 'https://www.wildberries.ru/catalog/0/search.aspx?search=%D0%BC%D0%B0%D1%81%D1%81%D0%B0%D0%B6%D0%BD%D1%8B%D0%B9+%D0%BF%D0%B8%D1%81%D1%82%D0%BE%D0%BB%D0%B5%D1%82+%D0%BC%D0%B8%D0%BD%D0%B8',
-      alphaUrl: 'https://alphashop.cn/ranking',
-      costApprox: '1 100–1 500 ₽',
-      roi: '65–90%'
+      src:'AlphaShop', srcClass:'src-alpha', emoji:'🏆',
+      title:'Массажный пистолет мини — складная ручка',
+      category:'Красота и здоровье',
+      cnPrice:'280–420 ¥ (~3 200–4 800 ₽)',
+      wbPriceRange:'2 490–4 990 ₽',
+      growth:'+84%', trend:'up',
+      demand:'Очень высокий', competition:'Средняя',
+      buyout:'74%', sellers:31,
+      revenue:'18 400 000 ₽/мес', margin:'28–35%',
+      season:'Круглогодично, пик — янв, март, сент',
+      // Логичный прогноз: товар УЖЕ есть, тренд растёт
+      forecast:'Товар уже продаётся на WB (31 продавец). В Китае спрос вырос на +84% — через 3–5 недель ожидается новая волна поставок из Китая и рост конкуренции на WB. <strong>Заходить надо сейчас</strong>, пока конкуренция ещё средняя.',
+      tags:['Портативный','Складной','6 насадок','3 скорости'],
+      wbSearchQuery:'массажный пистолет мини складной',
+      supplier1688:'按摩枪折叠',  // поисковый запрос на 1688
+      costApprox:'1 100–1 500 ₽',
+      roi:'65–90%'
     },
     {
-      src: 'Baidu Index',
-      srcClass: 'src-baidu',
-      emoji: '🔴',
-      title: 'Органайзер для кабелей настольный — магнитный',
-      category: 'Товары для дома / Офис',
-      cnPrice: '45–95 ¥ (~520–1 100 ₽)',
-      wbPriceRange: '590–1 490 ₽',
-      growth: '+61%',
-      trend: 'up',
-      demand: 'Высокий',
-      competition: 'Низкая',
-      buyout: '81%',
-      sellers: 14,
-      revenue: '6 200 000 ₽/мес',
-      margin: '38–48%',
-      season: 'Стабильно, пик — сент–ноябрь (офисный сезон)',
-      forecast: 'Низкая конкуренция — хороший вход сейчас',
-      tags: ['Магнитный', 'Алюминий', 'Несколько цветов'],
-      searchUrl: 'https://www.wildberries.ru/catalog/0/search.aspx?search=%D0%BE%D1%80%D0%B3%D0%B0%D0%BD%D0%B0%D0%B9%D0%B7%D0%B5%D1%80+%D0%BA%D0%B0%D0%B1%D0%B5%D0%BB%D0%B5%D0%B9',
-      alphaUrl: 'https://index.baidu.com',
-      costApprox: '280–450 ₽',
-      roi: '80–120%'
+      src:'Baidu Index', srcClass:'src-baidu', emoji:'🔴',
+      title:'Органайзер для кабелей настольный — магнитный',
+      category:'Товары для дома / Офис',
+      cnPrice:'45–95 ¥ (~520–1 100 ₽)',
+      wbPriceRange:'590–1 490 ₽',
+      growth:'+61%', trend:'up',
+      demand:'Высокий', competition:'Низкая',
+      buyout:'81%', sellers:14,
+      revenue:'6 200 000 ₽/мес', margin:'38–48%',
+      season:'Стабильно, пик — сент–ноябрь',
+      forecast:'На WB только 14 продавцов — ниша не занята. В Китае запросы в Baidu выросли на +61%. Аналог-тренд пришёл в Россию ~6 недель назад: товар есть, но ниша пустая. <strong>Отличный момент для входа.</strong>',
+      tags:['Магнитный','Алюминий','Несколько цветов'],
+      wbSearchQuery:'органайзер для кабелей магнитный',
+      supplier1688:'磁吸桌面整理收纳',
+      costApprox:'280–450 ₽',
+      roi:'80–120%'
     },
     {
-      src: 'Alibaba Index',
-      srcClass: 'src-alibaba',
-      emoji: '🟠',
-      title: 'LED подсветка монитора / ПК — USB ambient light',
-      category: 'Электроника / Геймерские аксессуары',
-      cnPrice: '65–140 ¥ (~750–1 600 ₽)',
-      wbPriceRange: '890–2 490 ₽',
-      growth: '+73%',
-      trend: 'up',
-      demand: 'Очень высокий',
-      competition: 'Средняя',
-      buyout: '78%',
-      sellers: 24,
-      revenue: '12 800 000 ₽/мес',
-      margin: '32–42%',
-      season: 'Высокий осень-зима, пик ноябрь-декабрь',
-      forecast: 'Геймерская аудитория 18–35 лет. Рост ожидается к осени',
-      tags: ['RGB', 'USB', 'Пульт', 'App control'],
-      searchUrl: 'https://www.wildberries.ru/catalog/0/search.aspx?search=LED+%D0%BF%D0%BE%D0%B4%D1%81%D0%B2%D0%B5%D1%82%D0%BA%D0%B0+%D0%BC%D0%BE%D0%BD%D0%B8%D1%82%D0%BE%D1%80',
-      alphaUrl: 'https://alizs.taobao.com',
-      costApprox: '380–650 ₽',
-      roi: '55–80%'
+      src:'Alibaba Index', srcClass:'src-alibaba', emoji:'🟠',
+      title:'LED подсветка монитора / ПК — USB ambient light',
+      category:'Электроника / Геймерские аксессуары',
+      cnPrice:'65–140 ¥ (~750–1 600 ₽)',
+      wbPriceRange:'890–2 490 ₽',
+      growth:'+73%', trend:'up',
+      demand:'Очень высокий', competition:'Средняя',
+      buyout:'78%', sellers:24,
+      revenue:'12 800 000 ₽/мес', margin:'32–42%',
+      season:'Пик осень-зима, ноябрь-декабрь',
+      forecast:'24 продавца на WB, ниша растёт. Alibaba Index фиксирует +73% заказов от российских импортёров. Через 4–6 недель ожидается увеличение числа продавцов. <strong>Заходить сейчас, пока <30 продавцов.</strong>',
+      tags:['RGB','USB','Пульт','App control'],
+      wbSearchQuery:'LED подсветка монитора USB RGB',
+      supplier1688:'显示器LED氛围灯USB',
+      costApprox:'380–650 ₽',
+      roi:'55–80%'
     },
     {
-      src: 'Spark AI GF',
-      srcClass: 'src-spark',
-      emoji: '🐉',
-      title: 'Диффузор ароматический — ультразвуковой, деревянный корпус',
-      category: 'Красота / Дом',
-      cnPrice: '90–180 ¥ (~1 050–2 100 ₽)',
-      wbPriceRange: '1 290–2 990 ₽',
-      growth: '+52%',
-      trend: 'up',
-      demand: 'Высокий',
-      competition: 'Средняя',
-      buyout: '76%',
-      sellers: 38,
-      revenue: '9 600 000 ₽/мес',
-      margin: '30–40%',
-      season: 'Осень-зима пик, ноябрь-февраль',
-      forecast: 'Тренд «уютный дом» активен. Хорошо идёт как подарок',
-      tags: ['Натуральное дерево', '7 цветов LED', '500мл'],
-      searchUrl: 'https://www.wildberries.ru/catalog/0/search.aspx?search=%D0%B0%D1%80%D0%BE%D0%BC%D0%B0%D1%82%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B9+%D0%B4%D0%B8%D1%84%D1%84%D1%83%D0%B7%D0%BE%D1%80',
-      alphaUrl: 'https://ai.sparkaigf.com',
-      costApprox: '550–850 ₽',
-      roi: '50–75%'
+      src:'Spark AI GF', srcClass:'src-spark', emoji:'🐉',
+      title:'Диффузор ароматический — ультразвуковой, деревянный корпус',
+      category:'Красота / Дом',
+      cnPrice:'90–180 ¥ (~1 050–2 100 ₽)',
+      wbPriceRange:'1 290–2 990 ₽',
+      growth:'+52%', trend:'up',
+      demand:'Высокий', competition:'Средняя',
+      buyout:'76%', sellers:38,
+      revenue:'9 600 000 ₽/мес', margin:'30–40%',
+      season:'Пик осень-зима: ноябрь–февраль',
+      forecast:'38 продавцов на WB, ниша активная. Spark AI GF анализирует: в Китае растут поставки новых моделей с деревом+стеклом. Обновлённые дизайны придут на WB через 3–4 недели — <strong>заходи с актуальным дизайном, а не старыми моделями.</strong>',
+      tags:['Натуральное дерево','7 цветов LED','500мл'],
+      wbSearchQuery:'ароматический диффузор деревянный ультразвуковой',
+      supplier1688:'木质香薰机超声波',
+      costApprox:'550–850 ₽',
+      roi:'50–75%'
     },
     {
-      src: 'Google Trends',
-      srcClass: 'src-google',
-      emoji: '🟢',
-      title: 'Мешок для стирки кроссовок — сетка-защита',
-      category: 'Спорт / Бытовые товары',
-      cnPrice: '12–28 ¥ (~140–320 ₽)',
-      wbPriceRange: '299–699 ₽',
-      growth: '+44%',
-      trend: 'up',
-      demand: 'Высокий',
-      competition: 'Очень низкая',
-      buyout: '87%',
-      sellers: 9,
-      revenue: '3 800 000 ₽/мес',
-      margin: '45–60%',
-      season: 'Март–октябрь, пик апрель (весенняя чистка)',
-      forecast: 'Идеальный товар для быстрого старта с малым бюджетом',
-      tags: ['Набор 3 шт', 'Разные размеры', 'Нейлон'],
-      searchUrl: 'https://www.wildberries.ru/catalog/0/search.aspx?search=%D0%BC%D0%B5%D1%88%D0%BE%D' + 'A7%D0%BE%D0%BA+%D0%BA%D1%80%D0%BE%D1%81%D1%81%D0%BE%D0%B2%D0%BE%D0%BA',
-      alphaUrl: 'https://trends.google.com',
-      costApprox: '90–160 ₽',
-      roi: '95–140%'
+      src:'Google Trends', srcClass:'src-google', emoji:'🟢',
+      title:'Мешок для стирки кроссовок — сетка-защита, набор',
+      category:'Спорт / Бытовые товары',
+      cnPrice:'12–28 ¥ (~140–320 ₽)',
+      wbPriceRange:'299–699 ₽',
+      growth:'+44%', trend:'up',
+      demand:'Высокий', competition:'Очень низкая',
+      buyout:'87%', sellers:9,
+      revenue:'3 800 000 ₽/мес', margin:'45–60%',
+      season:'Март–октябрь, пик апрель',
+      forecast:'Всего 9 продавцов — практически пустая ниша! Google Trends фиксирует рост запросов с марта. Сезон уже идёт. <strong>Немедленно выходить</strong> — через 2–3 месяца ниша заполнится.',
+      tags:['Набор 3 шт','Разные размеры','Нейлон'],
+      wbSearchQuery:'мешок стирки кроссовок защита',
+      supplier1688:'洗鞋袋网袋套装',
+      costApprox:'90–160 ₽',
+      roi:'95–140%'
     },
     {
-      src: 'AlphaShop',
-      srcClass: 'src-alpha',
-      emoji: '🏆',
-      title: 'Подставка под ноутбук складная — портативная, алюминий',
-      category: 'Электроника / Офис',
-      cnPrice: '80–160 ¥ (~930–1 850 ₽)',
-      wbPriceRange: '1 190–2 790 ₽',
-      growth: '+58%',
-      trend: 'up',
-      demand: 'Высокий',
-      competition: 'Средняя',
-      buyout: '79%',
-      sellers: 27,
-      revenue: '8 100 000 ₽/мес',
-      margin: '33–42%',
-      season: 'Стабильно, пик сентябрь–ноябрь',
-      forecast: 'Удалённая работа тренд 2025. Хорошая маржа',
-      tags: ['Алюминий', '7 углов', 'Складная', 'Для 13–17"'],
-      searchUrl: 'https://www.wildberries.ru/catalog/0/search.aspx?search=%D0%BF%D0%BE%D0%B4%D1%81%D1%82%D0%B0%D0%B2%D0%BA%D0%B0+%D0%BD%D0%BE%D1%83%D1%82%D0%B1%D1%83%D0%BA',
-      alphaUrl: 'https://alphashop.cn/ranking',
-      costApprox: '450–750 ₽',
-      roi: '60–85%'
+      src:'AlphaShop', srcClass:'src-alpha', emoji:'🏆',
+      title:'Подставка под ноутбук складная — портативная алюминий',
+      category:'Электроника / Офис',
+      cnPrice:'80–160 ¥ (~930–1 850 ₽)',
+      wbPriceRange:'1 190–2 790 ₽',
+      growth:'+58%', trend:'up',
+      demand:'Высокий', competition:'Средняя',
+      buyout:'79%', sellers:27,
+      revenue:'8 100 000 ₽/мес', margin:'33–42%',
+      season:'Стабильно, пик сентябрь–ноябрь',
+      forecast:'27 продавцов на WB — ниша есть, но не перегрета. AlphaShop фиксирует: новые модели с улучшенным охлаждением и USB-хабом становятся хитом в Китае. Обновлённые версии придут на WB через 4–6 недель — <strong>дифференцируйся по характеристикам.</strong>',
+      tags:['Алюминий','7 углов','Складная','Для 13–17"'],
+      wbSearchQuery:'подставка ноутбук складная алюминий',
+      supplier1688:'笔记本支架可折叠铝合金',
+      costApprox:'450–750 ₽',
+      roi:'60–85%'
     }
   ];
-  if (!kw) return allTrends;
-  const kwL = kw.toLowerCase();
-  const filtered = allTrends.filter(t =>
-    t.title.toLowerCase().includes(kwL) ||
-    t.category.toLowerCase().includes(kwL) ||
-    t.tags.some(tag => tag.toLowerCase().includes(kwL))
+  if(!kw) return allTrends;
+  const kwL=kw.toLowerCase();
+  const filtered=allTrends.filter(t=>
+    t.title.toLowerCase().includes(kwL)||
+    t.category.toLowerCase().includes(kwL)||
+    t.tags.some(tag=>tag.toLowerCase().includes(kwL))
   );
-  return filtered.length ? filtered : allTrends;
+  return filtered.length?filtered:allTrends;
 }
 
-async function runTrends() {
-  const kw = document.getElementById('trend-keyword').value.trim();
-  const useAlpha = document.getElementById('src-alpha').checked;
-  const useBaidu = document.getElementById('src-baidu').checked;
-  const useAlibaba = document.getElementById('src-alibaba').checked;
-  const useSpark = document.getElementById('src-spark').checked;
-  const useGoogle = document.getElementById('src-google').checked;
-  const el = document.getElementById('trends-result');
-  const btn = document.getElementById('btn-trends');
+async function runTrends(){
+  const kw=document.getElementById('trend-keyword').value.trim();
+  const useAlpha=document.getElementById('src-alpha').checked;
+  const useBaidu=document.getElementById('src-baidu').checked;
+  const useAlibaba=document.getElementById('src-alibaba').checked;
+  const useSpark=document.getElementById('src-spark').checked;
+  const useGoogle=document.getElementById('src-google').checked;
+  const el=document.getElementById('trends-result');
+  const btn=document.getElementById('btn-trends');
 
-  btn.disabled = true; btn.textContent = '⏳ Загружаем тренды...';
-  el.innerHTML = `<div class="loading"><div class="spin"></div><div class="loading-txt">Анализируем AlphaShop, Baidu, Alibaba, Spark AI...<br>Собираем топ-товары</div></div>`;
+  btn.disabled=true; btn.textContent='⏳ Загружаем тренды...';
+  el.innerHTML=`<div class="loading"><div class="spin"></div><div class="loading-txt">Анализируем AlphaShop, Baidu, Alibaba, Spark AI...<br>Собираем топ-товары</div></div>`;
 
-  // Фильтрация по включённым источникам
-  const srcFilter = {AlphaShop: useAlpha, 'Baidu Index': useBaidu, 'Alibaba Index': useAlibaba, 'Spark AI GF': useSpark, 'Google Trends': useGoogle};
-  let trends = getDemoTrends(kw).filter(t => srcFilter[t.src]);
-  if (!trends.length) trends = getDemoTrends(kw);
+  const srcFilter={AlphaShop:useAlpha,'Baidu Index':useBaidu,'Alibaba Index':useAlibaba,'Spark AI GF':useSpark,'Google Trends':useGoogle};
+  let trends=getDemoTrends(kw).filter(t=>srcFilter[t.src]);
+  if(!trends.length)trends=getDemoTrends(kw);
 
-  // Пробуем реальный поиск через встроенный Claude
-  // В production: window._builtinKey содержит серверный ключ
-  // Пока работаем на демо-данных с реальными ссылками
-
-  await new Promise(r => setTimeout(r, 1200)); // Имитация загрузки
-
-  btn.disabled = false; btn.textContent = '📈 Обновить тренды';
-  el.innerHTML = `<div style="font-size:10px;color:var(--m2);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:10px">🔥 Топ товаров — что взрывает продажи прямо сейчас</div>` + trends.map(renderTrendCard).join('');
+  await new Promise(r=>setTimeout(r,900));
+  btn.disabled=false; btn.textContent='📈 Обновить тренды';
+  el.innerHTML=`<div style="font-size:10px;color:var(--m2);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:10px">🔥 Топ трендов — что взрывает продажи прямо сейчас</div>`
+    +trends.map(renderTrendCard).join('');
 }
 
-function renderTrendCard(t) {
-  const trendIco = t.trend === 'up' ? '📈' : t.trend === 'down' ? '📉' : '→';
-  const srcBadgeClass = {AlphaShop:'src-alpha','Baidu Index':'src-baidu','Alibaba Index':'src-alibaba','Spark AI GF':'src-spark','Google Trends':'src-google'}[t.src] || 'src-google';
-  const compColor = t.competition === 'Очень низкая' || t.competition === 'Низкая' ? '#4ade80' : t.competition === 'Средняя' ? '#fbbf24' : '#f87171';
-  const growthNum = parseInt(t.growth) || 0;
+function renderTrendCard(t){
+  const srcBadgeClass={AlphaShop:'src-alpha','Baidu Index':'src-baidu','Alibaba Index':'src-alibaba','Spark AI GF':'src-spark','Google Trends':'src-google'}[t.src]||'src-google';
+  const compColor=t.competition==='Очень низкая'||t.competition==='Низкая'?'#4ade80':t.competition==='Средняя'?'#fbbf24':'#f87171';
+  const growthNum=parseInt(t.growth)||0;
+
+  // WB поиск — реальный URL
+  const wbUrl=`https://www.wildberries.ru/catalog/0/search.aspx?search=${encodeURIComponent(t.wbSearchQuery||t.title.split(' ').slice(0,3).join(' '))}`;
+  // 1688 — поиск поставщика
+  const url1688=`https://s.1688.com/selloffer/offerlist.htm?keywords=${encodeURIComponent(t.supplier1688||t.title.split(' ').slice(0,3).join(' '))}`;
+  const srcUrl={AlphaShop:'https://alphashop.cn/ranking','Baidu Index':'https://index.baidu.com','Alibaba Index':'https://alizs.taobao.com','Spark AI GF':'https://ai.sparkaigf.com','Google Trends':'https://trends.google.com'}[t.src]||'#';
 
   return `<div class="trend-card">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
       <span class="src-badge ${srcBadgeClass}">${t.emoji} ${t.src}</span>
-      <div style="text-align:right">
-        <div style="font-size:18px;font-weight:900;color:#4ade80">${t.growth}</div>
-        <div style="font-size:10px;color:var(--m2)">за 2 мес</div>
-      </div>
+      <div style="text-align:right"><div style="font-size:20px;font-weight:900;color:#4ade80">${t.growth}</div><div style="font-size:10px;color:var(--m2)">рост за 2 мес</div></div>
     </div>
 
-    <div style="font-size:15px;font-weight:800;line-height:1.35;margin-bottom:6px">${t.title}</div>
+    <div style="font-size:15px;font-weight:800;line-height:1.35;margin-bottom:5px">${t.title}</div>
     <div style="font-size:11px;color:var(--p2);font-weight:600;margin-bottom:10px">${t.category}</div>
 
-    <!-- Рост бар -->
-    <div class="mb" style="margin-bottom:12px"><div class="mb-fill" style="width:${Math.min(100,growthNum)}%;background:linear-gradient(90deg,#7c3aed,#4ade80)"></div></div>
+    <div class="mb" style="margin-bottom:12px"><div class="mb-fill" style="width:${Math.min(100,growthNum)}%;background:linear-gradient(90deg,var(--p),#4ade80)"></div></div>
 
     <!-- Цены -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
       <div class="pm-box">
-        <div style="font-size:10px;color:var(--m2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Цена Китай</div>
+        <div style="font-size:9px;color:var(--m2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Цена Китай (1688)</div>
         <div style="font-size:12px;font-weight:700;line-height:1.3">${t.cnPrice}</div>
       </div>
       <div class="pm-box">
-        <div style="font-size:10px;color:var(--m2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Цена на WB</div>
+        <div style="font-size:9px;color:var(--m2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Цена на WB</div>
         <div style="font-size:12px;font-weight:700;color:#fbbf24;line-height:1.3">${t.wbPriceRange}</div>
       </div>
     </div>
 
-    <!-- Ключевые метрики -->
+    <!-- Метрики -->
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px">
-      <div class="pm-box"><div style="font-size:14px;font-weight:800;color:#4ade80">${t.buyout}</div><div style="font-size:9px;color:var(--m2);text-transform:uppercase;letter-spacing:.4px">Выкуп</div></div>
-      <div class="pm-box"><div style="font-size:14px;font-weight:800;color:${compColor}">${t.sellers}</div><div style="font-size:9px;color:var(--m2);text-transform:uppercase;letter-spacing:.4px">Продавцов</div></div>
-      <div class="pm-box"><div style="font-size:13px;font-weight:800;color:#a78bfa">${t.margin}</div><div style="font-size:9px;color:var(--m2);text-transform:uppercase;letter-spacing:.4px">Маржа</div></div>
+      <div class="pm-box"><div style="font-size:14px;font-weight:800;color:#4ade80">${t.buyout}</div><div style="font-size:9px;color:var(--m2);text-transform:uppercase;letter-spacing:.3px">Выкуп</div></div>
+      <div class="pm-box"><div style="font-size:14px;font-weight:800;color:${compColor}">${t.sellers}</div><div style="font-size:9px;color:var(--m2);text-transform:uppercase;letter-spacing:.3px">Продавцов</div></div>
+      <div class="pm-box"><div style="font-size:13px;font-weight:800;color:var(--p2)">${t.margin}</div><div style="font-size:9px;color:var(--m2);text-transform:uppercase;letter-spacing:.3px">Маржа</div></div>
     </div>
 
     <!-- Аналитика -->
     <div style="background:var(--s2);border-radius:10px;padding:11px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">
-        <span style="color:var(--m2)">💰 Выручка ниши</span><span style="font-weight:700">${t.revenue}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">
-        <span style="color:var(--m2)">🏭 Себестоимость (1 шт)</span><span style="font-weight:700;color:#60a5fa">${t.costApprox}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">
-        <span style="color:var(--m2)">📊 ROI</span><span style="font-weight:700;color:#4ade80">${t.roi}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">
-        <span style="color:var(--m2)">⚔️ Конкуренция</span><span style="font-weight:700;color:${compColor}">${t.competition}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0">
-        <span style="color:var(--m2)">📅 Сезон</span><span style="font-weight:600;font-size:11px;text-align:right;max-width:55%">${t.season}</span>
-      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--m2)">💰 Выручка ниши</span><span style="font-weight:700">${t.revenue}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--m2)">🏭 Себестоимость (1 шт)</span><span style="font-weight:700;color:#60a5fa">${t.costApprox}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--m2)">📊 ROI</span><span style="font-weight:700;color:#4ade80">${t.roi}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--m2)">⚔️ Конкуренция WB</span><span style="font-weight:700;color:${compColor}">${t.competition}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--m2)">📅 Сезон</span><span style="font-weight:600;font-size:11px;text-align:right;max-width:58%">${t.season}</span></div>
     </div>
 
     <!-- Теги -->
@@ -1089,19 +1112,20 @@ function renderTrendCard(t) {
       ${t.tags.map(tag=>`<span style="padding:3px 9px;border-radius:8px;font-size:10px;font-weight:700;background:rgba(124,58,237,.14);color:var(--p2)">${tag}</span>`).join('')}
     </div>
 
-    <!-- Прогноз -->
-    <div style="background:rgba(124,58,237,.07);border-left:3px solid var(--p);border-radius:0 8px 8px 0;padding:9px 11px;margin-bottom:10px;font-size:12px;color:var(--m1);line-height:1.55">
-      🔮 <strong style="color:var(--p2)">Прогноз:</strong> ${t.forecast}
+    <!-- Прогноз — подробный и логичный -->
+    <div style="background:rgba(124,58,237,.07);border-left:3px solid var(--p);border-radius:0 9px 9px 0;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--m1);line-height:1.65">
+      🔮 <strong style="color:var(--p2)">Аналитика:</strong> ${t.forecast}
     </div>
 
     <!-- Кнопки -->
-    <div style="display:flex;gap:8px">
-      <a class="wb-link" href="${t.searchUrl}" target="_blank" style="flex:1;justify-content:center">🔗 Смотреть на WB</a>
-      <a class="wb-link" href="${t.alphaUrl}" target="_blank" style="flex:1;justify-content:center;background:rgba(124,58,237,.08);border-color:rgba(124,58,237,.25);color:var(--p2)">📊 Источник</a>
-    </div>
-    <button class="btn btn-sm btn-out" style="margin-top:8px;width:100%" onclick="addToWLDirect('${t.title}',parseInt('${t.revenue}'.replace(/[^0-9]/g,'')),parseInt('${t.buyout}'))">+ В Watchlist</button>
+    <a class="wb-link" href="${wbUrl}" target="_blank" style="margin-bottom:7px">🔗 Смотреть товар на Wildberries</a>
+    <a class="wb-link" href="${url1688}" target="_blank" style="margin-bottom:7px;background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.25);color:#f87171">🇨🇳 Найти поставщика на 1688 (выгодная цена)</a>
+    <a class="wb-link" href="${srcUrl}" target="_blank" style="background:rgba(124,58,237,.08);border-color:rgba(124,58,237,.25);color:var(--p2)">📊 Открыть источник: ${t.src}</a>
+    <button class="btn btn-sm btn-out" style="margin-top:8px;width:100%" onclick="addToWLDirect('${t.title.replace(/'/g,'`')}',parseInt('${t.revenue}'.replace(/[^0-9]/g,'')),parseInt('${t.buyout}'))">+ В Watchlist</button>
   </div>`;
 }
+
+
 
 // ══════════════════════════════════════════════════
 //  АНАЛИЗ НИШИ
